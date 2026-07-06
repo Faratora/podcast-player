@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Podcast Player</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="app">
+        <!-- Navigation -->
+        <nav id="navbar">
+            <div class="nav-container">
+                <div class="nav-brand" id="nav-home">🎙️ Podcasts</div>
+                <div class="nav-links">
+                    <button class="nav-link" id="nav-playlist">📋 Playlist</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main id="main-content">
+            <!-- Landing Page -->
+            <section id="landing-page" class="page active">
+                <div class="search-container">
+                    <input
+                        type="text"
+                        id="search-input"
+                        placeholder="Search podcasts..."
+                        autocomplete="off"
+                    />
+                    <div id="search-status"></div>
+                </div>
+                <div id="podcast-grid" class="podcast-grid">
+                   
+                </div>
+                <div id="loading-indicator" class="loading-indicator" style="display: none">
+                    Loading...
+                </div>
+            </section>
+
+           
+            <section id="details-page" class="page">
+                <button id="back-button" class="back-button">← Back</button>
+                <div id="podcast-details">
+                   
+                </div>
+                <div id="episodes-list" class="episodes-list">
+                    
+                </div>
+            </section>
+
+            
+            <section id="playlist-page" class="page">
+                <h2>📋 My Playlist</h2>
+                <div id="playlist-container">
+                    <div id="playlist-empty" class="playlist-empty">
+                        <p>Your playlist is empty. Add episodes from the podcast details page!</p>
+                    </div>
+                    <div id="playlist-items" class="playlist-items"></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Audio Player -->
+        <div id="player" class="player hidden">
+            <div class="player-container">
+                <div class="player-info">
+                    <div class="player-episode-title" id="player-title">No episode selected</div>
+                    <div class="player-podcast-title" id="player-podcast">Podcast</div>
+                </div>
+                <div class="player-controls">
+                    <button id="rewind-btn" class="player-btn rewind" title="Back 15s">⏪</button>
+                    <button id="play-pause-btn" class="player-btn">▶</button>
+                    <button id="forward-btn" class="player-btn forward" title="Forward 15s">⏩</button>
+                    <div class="player-progress-container">
+                        <span class="player-time" id="current-time">0:00</span>
+                        <div class="player-progress-bar" id="progress-bar">
+                            <div class="player-progress-fill" id="progress-fill"></div>
+                        </div>
+                        <span class="player-time" id="total-time">0:00</span>
+                    </div>
+                    <button id="playlist-toggle-btn" class="player-btn playlist-toggle" title="Add to playlist">📋</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
