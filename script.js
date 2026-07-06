@@ -1,8 +1,5 @@
 const CONFIG = {
-    API_KEY: window.__PODCAST_API_KEY__ || (() => {
-        alert('API key not configured...');
-        return '';
-    })(),
+    API_KEY: window.__PODCAST_API_KEY__ || '',
     BASE_URL: 'https://listen-api-test.listennotes.com/api/v2',
     DEBOUNCE_DELAY: 300,
     RESUME_OFFSET: 10,
@@ -27,80 +24,67 @@ class AppState {
     }
 
     loadPlaylist() {
-    try {
-        const data = localStorage.getItem('podcast_playlist');
-        return data ? JSON.parse(data) : [];
-    } catch {
-        return [];
+        try {
+            const data = localStorage.getItem('podcast_playlist');
+            return data ? JSON.parse(data) : [];
+        } catch {
+            return [];
+        }
     }
-}
 
-savePlaylist() {
-    localStorage.setItem('podcast_playlist', JSON.stringify(this.playlist));
-}
-
-loadProgress() {
-    try {
-        const data = localStorage.getItem('podcast_progress');
-        return data ? JSON.parse(data) : {};
-    } catch {
-        return {};
+    savePlaylist() {
+        localStorage.setItem('podcast_playlist', JSON.stringify(this.playlist));
     }
-}
 
-saveProgress(episodeId, position) {
-    this.playbackProgress[episodeId] = position;
-    localStorage.setItem('podcast_progress', JSON.stringify(this.playbackProgress));
-}
-
-loadPlaylist() {
-    try {
-        const data = localStorage.getItem('podcast_playlist');
-        return data ? JSON.parse(data) : [];
-    } catch {
-        return [];
+    loadProgress() {
+        try {
+            const data = localStorage.getItem('podcast_progress');
+            return data ? JSON.parse(data) : {};
+        } catch {
+            return {};
+        }
     }
-}
 
-savePlaylist() {
-    localStorage.setItem('podcast_playlist', JSON.stringify(this.playlist));
-}
-
-loadProgress() {
-    try {
-        const data = localStorage.getItem('podcast_progress');
-        return data ? JSON.parse(data) : {};
-    } catch {
-        return {};
+    saveProgress(episodeId, position) {
+        this.playbackProgress[episodeId] = position;
+        localStorage.setItem('podcast_progress', JSON.stringify(this.playbackProgress));
     }
-}
 
-saveProgress(episodeId, position) {
-    this.playbackProgress[episodeId] = position;
-    localStorage.setItem('podcast_progress', JSON.stringify(this.playbackProgress));
-}
+    loadCurrentEpisodeId() {
+        try {
+            return localStorage.getItem('podcast_current_episode_id') || null;
+        } catch {
+            return null;
+        }
+    }
 
-addToPlaylist(episode) {
-    if (!this.playlist.find(e => e.id === episode.id)) {
-        this.playlist.push(episode);
+    saveCurrentEpisodeId(episodeId) {
+        localStorage.setItem('podcast_current_episode_id', episodeId);
+    }
+
+    addToPlaylist(episode) {
+        if (!this.playlist.find(e => e.id === episode.id)) {
+            this.playlist.push(episode);
+            this.savePlaylist();
+            return true;
+        }
+        return false;
+    }
+
+    removeFromPlaylist(episodeId) {
+        this.playlist = this.playlist.filter(e => e.id !== episodeId);
         this.savePlaylist();
-        return true;
     }
-    return false;
-}
 
-removeFromPlaylist(episodeId) {
-    this.playlist = this.playlist.filter(e => e.id !== episodeId);
-    this.savePlaylist();
-}
-
-isInPlaylist(episodeId) {
-    return this.playlist.some(e => e.id === episodeId);
+    isInPlaylist(episodeId) {
+        return this.playlist.some(e => e.id === episodeId);
+    }
 }
 
 class PodcastAPI {
     constructor(apiKey) {
         this.apiKey = apiKey;
         this.cache = new Map();
-        this.cacheTTL = 5 * 60 * 1000; // 5 минут
+        this.cacheTTL = 5 * 60 * 1000;
     }
+}
