@@ -79,3 +79,21 @@ saveProgress(episodeId, position) {
     this.playbackProgress[episodeId] = position;
     localStorage.setItem('podcast_progress', JSON.stringify(this.playbackProgress));
 }
+
+addToPlaylist(episode) {
+    if (!this.playlist.find(e => e.id === episode.id)) {
+        this.playlist.push(episode);
+        this.savePlaylist();
+        return true;
+    }
+    return false;
+}
+
+removeFromPlaylist(episodeId) {
+    this.playlist = this.playlist.filter(e => e.id !== episodeId);
+    this.savePlaylist();
+}
+
+isInPlaylist(episodeId) {
+    return this.playlist.some(e => e.id === episodeId);
+}
