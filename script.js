@@ -97,3 +97,10 @@ removeFromPlaylist(episodeId) {
 isInPlaylist(episodeId) {
     return this.playlist.some(e => e.id === episodeId);
 }
+
+class PodcastAPI {
+    constructor(apiKey) {
+        this.apiKey = apiKey;
+        this.cache = new Map();
+        this.cacheTTL = 5 * 60 * 1000; // 5 минут
+    }
