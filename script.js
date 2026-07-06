@@ -7,3 +7,21 @@ const CONFIG = {
     DEBOUNCE_DELAY: 300,
     RESUME_OFFSET: 10,
 };
+
+class AppState {
+    constructor() {
+        this.currentPage = 'landing';
+        this.currentPodcastId = null;
+        this.currentEpisode = null;
+        this.playlist = this.loadPlaylist();
+        this.playbackProgress = this.loadProgress();
+        this.currentEpisodeId = this.loadCurrentEpisodeId();
+        this.searchQuery = '';
+        this.pagination = {
+            landing: { page: 1, hasMore: true },
+            search: { offset: 0, hasMore: true },
+        };
+        this.isLoading = false;
+        this.audioPlayer = new Audio();
+        this.audioPlayer.preload = 'metadata';
+    }
