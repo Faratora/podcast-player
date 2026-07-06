@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Generate Commit Message (Copy to Clipboard)",
+            "type": "shell",
+            "command": "powershell -ExecutionPolicy Bypass -File ${workspaceFolder}/.vscode/scripts/generate-commit.ps1",
+            "group": "none",
+            "problemMatcher": [],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": false
+            }
+        },
+        {
+            "label": "Git: Commit with Date",
+            "dependsOn": ["Generate Commit Message (Copy to Clipboard)"],
+            "command": "git.commit",
+            "problemMatcher": []
+        }
+    ]
+}
