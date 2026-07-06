@@ -52,3 +52,30 @@ saveProgress(episodeId, position) {
     this.playbackProgress[episodeId] = position;
     localStorage.setItem('podcast_progress', JSON.stringify(this.playbackProgress));
 }
+
+loadPlaylist() {
+    try {
+        const data = localStorage.getItem('podcast_playlist');
+        return data ? JSON.parse(data) : [];
+    } catch {
+        return [];
+    }
+}
+
+savePlaylist() {
+    localStorage.setItem('podcast_playlist', JSON.stringify(this.playlist));
+}
+
+loadProgress() {
+    try {
+        const data = localStorage.getItem('podcast_progress');
+        return data ? JSON.parse(data) : {};
+    } catch {
+        return {};
+    }
+}
+
+saveProgress(episodeId, position) {
+    this.playbackProgress[episodeId] = position;
+    localStorage.setItem('podcast_progress', JSON.stringify(this.playbackProgress));
+}
