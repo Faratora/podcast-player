@@ -535,3 +535,40 @@ updatePlaylistView() {
         });
     });
 }
+
+// навигация между страницами
+
+navigateTo(page, id = null) {
+    
+    if (this.state.currentEpisode) {
+        const audio = this.state.audioPlayer;
+        if (audio.currentTime > 0) {
+            this.state.saveProgress(
+                this.state.currentEpisode.id,
+                audio.currentTime
+            );
+        }
+    }
+
+    
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+
+    
+    if (page === 'landing') {
+        this.elements.landingPage.classList.add('active');
+        this.state.currentPage = 'landing';
+        if (!this.elements.podcastGrid.children.length) {
+            this.loadLandingPage();
+        }
+    } else if (page === 'details' && id) {
+        this.elements.detailsPage.classList.add('active');
+        this.state.currentPage = 'details';
+        this.loadPodcastDetails(id);
+    } else if (page === 'playlist') {
+        this.elements.playlistPage.classList.add('active');
+        this.state.currentPage = 'playlist';
+        this.updatePlaylistView();
+    }
+
+    window.scrollTo(0, 0);
+}
