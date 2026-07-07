@@ -147,3 +147,48 @@ async getPodcastEpisodes(id, offset = 0) {
     const url = `${CONFIG.BASE_URL}/podcasts/${id}/episodes?offset=${offset}&sort_by_pub_date=asc`;
     return this.fetch(url);
 }
+
+
+class PodcastApp {
+    constructor() {
+        this.state = new AppState();
+        this.api = new PodcastAPI(CONFIG.API_KEY);
+        this.searchTimeout = null;
+        this.isPlaying = false;
+        this.init();
+    }
+
+    init() {
+        this.elements = {
+            landingPage: document.getElementById('landing-page'),
+            detailsPage: document.getElementById('details-page'),
+            playlistPage: document.getElementById('playlist-page'),
+            podcastGrid: document.getElementById('podcast-grid'),
+            detailsContainer: document.getElementById('podcast-details'),
+            episodesList: document.getElementById('episodes-list'),
+            searchInput: document.getElementById('search-input'),
+            searchStatus: document.getElementById('search-status'),
+            loadingIndicator: document.getElementById('loading-indicator'),
+            backButton: document.getElementById('back-button'),
+            navHome: document.getElementById('nav-home'),
+            navPlaylist: document.getElementById('nav-playlist'),
+            player: document.getElementById('player'),
+            playerTitle: document.getElementById('player-title'),
+            playerPodcast: document.getElementById('player-podcast'),
+            playPauseBtn: document.getElementById('play-pause-btn'),
+            rewindBtn: document.getElementById('rewind-btn'),
+            forwardBtn: document.getElementById('forward-btn'),
+            progressFill: document.getElementById('progress-fill'),
+            progressBar: document.getElementById('progress-bar'),
+            currentTime: document.getElementById('current-time'),
+            totalTime: document.getElementById('total-time'),
+            playlistToggleBtn: document.getElementById('playlist-toggle-btn'),
+            playlistItems: document.getElementById('playlist-items'),
+            playlistEmpty: document.getElementById('playlist-empty'),
+        };
+        
+        this.setupEventListeners();
+        this.loadLandingPage();
+        this.restorePlaybackState();
+        this.setupAudioPlayer();
+    }
