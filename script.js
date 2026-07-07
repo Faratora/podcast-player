@@ -469,3 +469,69 @@ playEpisode(episode, podcast) {
         this.isPlaying = false;
     });
 }
+
+togglePlaylist() {
+    if (!this.state.currentEpisode) return;
+
+    const episode = this.state.currentEpisode;
+    if (this.state.isInPlaylist(episode.id)) {
+        this.state.removeFromPlaylist(episode.id);
+    } else {
+        const playlistEpisode = {
+            id: episode.id,
+            title: episode.title || 'Untitled Episode',
+            duration: episode.duration || 0,
+            podcast_title: this.elements.playerPodcast.textContent || 'Podcast',
+            audio: episode.audio || ''
+        };
+        this.state.addToPlaylist(playlistEpisode);
+    }
+    this.updatePlaylistToggle();
+    this.updatePlaylistView();
+}
+
+updatePlaylistView() {
+    const playlist = this.state.playlist;
+    const container = this.elements.playlistItems;
+    const empty = this.elements.playlistEmpty;
+
+    if (playlist.length === 0) {
+        container.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+    }
+
+    empty.style.display = 'none';
+    container.innerHTML = playlist.map(episode => `
+        <div class="playlist-item" data-id="${episode.id}">
+            <div class="episode-info">
+                <h4>${episode.title || 'Untitled Episode'}</h4>
+                <div class="episode-meta">
+                    <span>${episode.podcast_title || 'Podcast'}</span>
+                    <span>${this.formatDuration(episode.duration)}</span>
+                </div>
+            </div>
+            <button class="remove-btn" data-id="${episode.id}">×</button>
+        </div>
+    `).join('');
+
+    
+    container.querySelectorAll('.playlist-item .episode-info').forEach((info, index) => {
+        info.addEventListener('click', () => {
+            const episode = playlist[index];
+            if (episode) {
+                this.playEpisode(episode, { title: episode.podcast_title || 'Podcast' });
+            }
+        });
+    });
+
+    container.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            this.state.removeFromPlaylist(id);
+            this.updatePlaylistView();
+            this.updatePlaylistToggle();
+        });
+    });
+}
