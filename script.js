@@ -192,3 +192,58 @@ class PodcastApp {
         this.restorePlaybackState();
         this.setupAudioPlayer();
     }
+
+    setupEventListeners() {
+    
+    this.elements.searchInput.addEventListener('input', (e) => {
+        clearTimeout(this.searchTimeout);
+        const query = e.target.value.trim();
+        this.state.searchQuery = query;
+
+        this.searchTimeout = setTimeout(() => {
+            if (query) {
+                this.navigateTo('landing');
+                this.performSearch(query);
+            } else {
+                this.state.currentPage = 'landing';
+                this.loadLandingPage();
+            }
+        }, CONFIG.DEBOUNCE_DELAY);
+    });
+
+    
+    this.elements.navHome.addEventListener('click', () => this.navigateTo('landing'));
+    this.elements.navPlaylist.addEventListener('click', () => this.navigateTo('playlist'));
+    this.elements.backButton.addEventListener('click', () => this.navigateTo('landing'));
+
+    
+    this.elements.playPauseBtn.addEventListener('click', () => this.togglePlayback());
+    this.elements.rewindBtn.addEventListener('click', () => this.seekRelative(-15));
+    this.elements.forwardBtn.addEventListener('click', () => this.seekRelative(15));
+
+    
+    this.elements.progressBar.addEventListener('click', (e) => {
+        const rect = this.elements.progressBar.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const percentage = x / rect.width;
+        const duration = this.state.audioPlayer.duration;
+        if (duration) {
+            this.state.audioPlayer.currentTime = percentage * duration;
+        }
+    });
+
+    this.elements.playlistToggleBtn.addEventListener('click', () => {
+        if (this.state.currentEpisode) {
+            this.togglePlaylist();
+        }
+    });
+
+    window.addEventListener('scroll', () => this.handleScroll());
+
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+            e.preventDefault();
+            this.togglePlayback();
+        }
+    });
+}
