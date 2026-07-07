@@ -247,3 +247,53 @@ class PodcastApp {
         }
     });
 }
+
+setupAudioPlayer() {
+    const audio = this.state.audioPlayer;
+
+    // Обновление прогресса
+    audio.addEventListener('timeupdate', () => {
+        if (audio.duration && !isNaN(audio.duration)) {
+            const progress = (audio.currentTime / audio.duration) * 100;
+            this.elements.progressFill.style.width = `${progress}%`;
+            this.elements.currentTime.textContent = this.formatTime(audio.currentTime);
+            
+            if (this.state.currentEpisode && audio.currentTime > 0) {
+                this.state.saveProgress(this.state.currentEpisode.id, audio.currentTime);
+            }
+        }
+    });
+
+    // Загрузка метаданных
+    audio.addEventListener('loadedmetadata', () => {
+        this.elements.totalTime.textContent = this.formatTime(audio.duration);
+        
+        if (this.state.currentEpisode) {
+            const savedProgress = this.state.getProgress(this.state.currentEpisode.id);
+            if (savedProgress > 0) {
+                const resumeTime = Math.max(0, savedProgress - CONFIG.RESUME_OFFSET);
+                audio.currentTime = resumeTime;
+            }
+        }
+    });
+
+    // Изменение кнопки Play/Pause
+    audio.addEventListener('play', () => {
+        this.isPlaying = true;
+        this.elements.playPauseBtn.textContent = '⏸';
+    });
+
+    audio.addEventListener('pause', () => {
+        this.isPlaying = false;
+        this.elements.playPauseBtn.textContent = '▶';
+    });
+
+    // Когда эпизод закончился
+    audio.addEventListener('ended', () => {
+        this.isPlaying = false;
+        this.elements.playPauseBtn.textContent = '▶';
+        this.elements.progressFill.style.width = '0%';
+        this.elements.currentTime.textContent = '0:00';
+        this.state.saveCurrentEpisodeId(null);
+    });
+}
