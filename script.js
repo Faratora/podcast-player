@@ -79,6 +79,10 @@ class AppState {
     isInPlaylist(episodeId) {
         return this.playlist.some(e => e.id === episodeId);
     }
+
+    getProgress(episodeId) {
+        return this.playbackProgress[episodeId] || 0;
+    }
 }
 
 class PodcastAPI {
@@ -87,65 +91,62 @@ class PodcastAPI {
         this.cache = new Map();
         this.cacheTTL = 5 * 60 * 1000;
     }
-}
 
-async fetch(url, retries = 3) {
-    ``
-    const cached = this.cache.get(url);
-    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
-        return cached.data;
-    }
+    async fetch(url, retries = 3) {
+        const cached = this.cache.get(url);
+        if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+            return cached.data;
+        }
 
-    
-    for (let i = 0; i < retries; i++) {
-        try {
-            const response = await fetch(url, {
-                headers: {
-                    'Accept': 'application/json',
-                    'X-ListenAPI-Key': this.apiKey,
-                },
-            });
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-ListenAPI-Key': this.apiKey,
+                    },
+                });
 
-            
-            if (response.status === 429) {
-                const retryAfter = parseInt(response.headers.get('Retry-After') || '60');
-                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
-                continue;
+                if (response.status === 429) {
+                    const retryAfter = parseInt(response.headers.get('Retry-After') || '60');
+                    await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                    continue;
+                }
+
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status}`);
+                }
+
+                const data = await response.json();
+                this.cache.set(url, { data, timestamp: Date.now() });
+                return data;
+            } catch (error) {
+                if (i === retries - 1) throw error;
+                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
             }
-
-            if (!response.ok) {
-                throw new Error(`API request failed: ${response.status}`);
-            }
-
-            const data = await response.json();
-            this.cache.set(url, { data, timestamp: Date.now() });
-            return data;
-        } catch (error) {
-            if (i === retries - 1) throw error;
-            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
         }
     }
-}
 
-async getBestPodcasts(page = 1) {
-    const url = `${CONFIG.BASE_URL}/best_podcasts?sort=recent_published_first&page=${page}`;
-    return this.fetch(url);
-}
+    async getBestPodcasts(page = 1) {
+        const url = `${CONFIG.BASE_URL}/best_podcasts?sort=recent_published_first&page=${page}`;
+        return this.fetch(url);
+    }
 
-async searchPodcasts(query, offset = 0) {
-    const encodedQuery = encodeURIComponent(query);
-    const url = `${CONFIG.BASE_URL}/search?q=${encodedQuery}&type=podcast&offset=${offset}`;
-    return this.fetch(url);
-}
+    async searchPodcasts(query, offset = 0) {
+        const encodedQuery = encodeURIComponent(query);
+        const url = `${CONFIG.BASE_URL}/search?q=${encodedQuery}&type=podcast&offset=${offset}`;
+        return this.fetch(url);
+    }
 
-async getPodcastDetails(id) {
-    const url = `${CONFIG.BASE_URL}/podcasts/${id}`;
-    return this.fetch(url);
-}
+    async getPodcastDetails(id) {
+        const url = `${CONFIG.BASE_URL}/podcasts/${id}`;
+        return this.fetch(url);
+    }
 
-async getPodcastEpisodes(id, offset = 0) {
-    const url = `${CONFIG.BASE_URL}/podcasts/${id}/episodes?offset=${offset}&sort_by_pub_date=asc`;
-    return this.fetch(url);
+    async getPodcastEpisodes(id, offset = 0) {
+        const url = `${CONFIG.BASE_URL}/podcasts/${id}/episodes?offset=${offset}&sort_by_pub_date=asc`;
+        return this.fetch(url);
+    }
 }
 
 
