@@ -297,3 +297,37 @@ setupAudioPlayer() {
         this.state.saveCurrentEpisodeId(null);
     });
 }
+
+async loadLandingPage(append = false) {
+    this.showLoading();
+
+    if (!append) {
+        this.state.pagination.landing.page = 1;
+        this.state.pagination.landing.hasMore = true;
+        this.elements.podcastGrid.innerHTML = '';
+        this.api.cache.clear();
+    }
+
+    try {
+        const page = this.state.pagination.landing.page;
+        const data = await this.api.getBestPodcasts(page);
+        const podcasts = data.podcasts || [];
+
+        if (append) {
+            this.appendPodcasts(podcasts);
+        } else {
+            this.renderPodcasts(podcasts);
+        }
+
+        this.state.pagination.landing.hasMore = data.has_next || false;
+        this.state.pagination.landing.page = page + 1;
+        this.elements.searchStatus.textContent = data.total ? `Showing ${data.total} podcasts` : '';
+    } catch (error) {
+        console.error('Failed to load podcasts:', error);
+        if (!append) {
+            this.elements.podcastGrid.innerHTML = '<p style="color: #ff4444;">Failed to load podcasts.</p>';
+        }
+    } finally {
+        this.hideLoading();
+    }
+}
