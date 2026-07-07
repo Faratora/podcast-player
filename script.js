@@ -363,3 +363,61 @@ async performSearch(query, reset = true) {
         this.hideLoading();
     }
 }
+
+async loadPodcastDetails(id) {
+    this.showLoading();
+    try {
+        const [podcastData, episodesData] = await Promise.all([
+            this.api.getPodcastDetails(id),
+            this.api.getPodcastEpisodes(id),
+        ]);
+        this.state.currentPodcastId = id;
+        this.renderDetails({ ...podcastData, episodes: episodesData.episodes || [] });
+    } catch (error) {
+        console.error('Failed to load podcast details:', error);
+        this.elements.detailsContainer.innerHTML = '<p>Failed to load podcast details.</p>';
+    } finally {
+        this.hideLoading();
+    }
+}
+
+renderDetails(podcast) {
+    
+    this.elements.detailsContainer.innerHTML = `
+        <img src="${podcast.image || podcast.thumbnail || 'https://via.placeholder.com/200'}" 
+             alt="${podcast.title || 'Podcast'}" />
+        <div class="podcast-info">
+            <h2>${podcast.title || 'Untitled'}</h2>
+            <p class="author">${podcast.publisher || 'Unknown Author'}</p>
+            <p>${podcast.description || 'No description available.'}</p>
+            ${podcast.website ? `<p><a href="${podcast.website}" target="_blank">Visit Website</a></p>` : ''}
+        </div>
+    `;
+
+    
+    const episodes = podcast.episodes || [];
+    this.elements.episodesList.innerHTML = episodes.map(episode => `
+        <div class="episode-item" data-id="${episode.id}">
+            <div class="episode-info">
+                <h4>${episode.title || episode.title_original || 'Untitled Episode'}</h4>
+                <div class="episode-meta">
+                    <span>${this.formatDate(episode.pub_date)}</span>
+                    <span>${this.formatDuration(episode.duration)}</span>
+                    ${this.state.isInPlaylist(episode.id) ? '<span>📋 In Playlist</span>' : ''}
+                </div>
+            </div>
+            <span class="play-icon">▶</span>
+        </div>
+    `).join('');
+
+    
+    this.elements.episodesList.querySelectorAll('.episode-item').forEach(item => {
+        item.addEventListener('click', () => {
+            const id = item.dataset.id;
+            const episode = episodes.find(e => e.id === id);
+            if (episode) {
+                this.playEpisode(episode, podcast);
+            }
+        });
+    });
+}
