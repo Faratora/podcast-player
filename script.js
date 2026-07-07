@@ -332,3 +332,34 @@ async loadLandingPage(append = false) {
         this.hideLoading();
     }
 }
+
+async performSearch(query, reset = true) {
+    this.showLoading();
+    
+    if (reset) {
+        this.state.pagination.search.offset = 0;
+        this.state.pagination.search.hasMore = true;
+        this.elements.podcastGrid.innerHTML = '';
+        this.api.cache.clear();
+    }
+
+    try {
+        const data = await this.api.searchPodcasts(query, this.state.pagination.search.offset);
+        const podcasts = data.results || [];
+        
+        if (reset) {
+            this.renderPodcasts(podcasts);
+        } else {
+            this.appendPodcasts(podcasts);
+        }
+
+        this.state.pagination.search.hasMore = data.has_next || false;
+        this.state.pagination.search.offset = data.next_offset || 0;
+        this.elements.searchStatus.textContent = data.total ? `Found ${data.total} podcasts` : 'No results found';
+    } catch (error) {
+        console.error('Search failed:', error);
+        this.elements.podcastGrid.innerHTML = '<p>Search failed.</p>';
+    } finally {
+        this.hideLoading();
+    }
+}
