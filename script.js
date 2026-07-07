@@ -126,3 +126,24 @@ async fetch(url, retries = 3) {
         }
     }
 }
+
+async getBestPodcasts(page = 1) {
+    const url = `${CONFIG.BASE_URL}/best_podcasts?sort=recent_published_first&page=${page}`;
+    return this.fetch(url);
+}
+
+async searchPodcasts(query, offset = 0) {
+    const encodedQuery = encodeURIComponent(query);
+    const url = `${CONFIG.BASE_URL}/search?q=${encodedQuery}&type=podcast&offset=${offset}`;
+    return this.fetch(url);
+}
+
+async getPodcastDetails(id) {
+    const url = `${CONFIG.BASE_URL}/podcasts/${id}`;
+    return this.fetch(url);
+}
+
+async getPodcastEpisodes(id, offset = 0) {
+    const url = `${CONFIG.BASE_URL}/podcasts/${id}/episodes?offset=${offset}&sort_by_pub_date=asc`;
+    return this.fetch(url);
+}
