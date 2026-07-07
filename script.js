@@ -14,6 +14,7 @@ class PodcastApp {
         this.hasMore = true;
         this.isSearching = false;
         this.searchTimeout = null;
+        this.currentEpisodeId = null;
 
         this.cache = new Map();
         this.cacheTTL = 5 * 60 * 1000;
@@ -120,6 +121,15 @@ class PodcastApp {
                 const pct = (this.audio.currentTime / this.audio.duration) * 100;
                 this.el('progress-fill').style.width = `${pct}%`;
                 this.el('current-time').textContent = this.formatTime(this.audio.currentTime);
+
+                // Save playback position
+                if (this.currentEpisodeId && this.audio.currentTime > 5) {
+                    const saved = JSON.parse(localStorage.getItem('podcast_current_episode') || '{}');
+                    if (saved.id === this.currentEpisodeId) {
+                        saved.currentTime = this.audio.currentTime;
+                        localStorage.setItem('podcast_current_episode', JSON.stringify(saved));
+                    }
+                }
             }
         });
 
@@ -138,6 +148,8 @@ class PodcastApp {
         this.audio.addEventListener('ended', () => {
             this.el('play-pause-btn').textContent = '▶';
             this.el('progress-fill').style.width = '0%';
+            localStorage.removeItem('podcast_current_episode');
+            this.currentEpisodeId = null;
         });
     }
 
@@ -300,6 +312,22 @@ class PodcastApp {
         this.el('player-title').textContent = title;
         this.el('player-podcast').textContent = podcast;
         this.el('player').classList.remove('hidden');
+        this.currentEpisodeId = title + '-' + podcast;
+
+        // Restore saved position if available
+        const saved = JSON.parse(localStorage.getItem('podcast_current_episode') || '{}');
+        if (saved.id === this.currentEpisodeId && saved.currentTime > 5) {
+            this.audio.currentTime = saved.currentTime;
+        }
+
+        // Save episode info
+        localStorage.setItem('podcast_current_episode', JSON.stringify({
+            id: this.currentEpisodeId,
+            currentTime: 0,
+            title,
+            podcast,
+            url,
+        }));
     }
 
     togglePlay() {
