@@ -88,3 +88,41 @@ class PodcastAPI {
         this.cacheTTL = 5 * 60 * 1000;
     }
 }
+
+async fetch(url, retries = 3) {
+    ``
+    const cached = this.cache.get(url);
+    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+        return cached.data;
+    }
+
+    
+    for (let i = 0; i < retries; i++) {
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-ListenAPI-Key': this.apiKey,
+                },
+            });
+
+            
+            if (response.status === 429) {
+                const retryAfter = parseInt(response.headers.get('Retry-After') || '60');
+                await new Promise(resolve => setTimeout(resolve, retryAfter * 1000));
+                continue;
+            }
+
+            if (!response.ok) {
+                throw new Error(`API request failed: ${response.status}`);
+            }
+
+            const data = await response.json();
+            this.cache.set(url, { data, timestamp: Date.now() });
+            return data;
+        } catch (error) {
+            if (i === retries - 1) throw error;
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+        }
+    }
+}
