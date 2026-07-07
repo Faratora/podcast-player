@@ -252,7 +252,7 @@ class PodcastApp {
 setupAudioPlayer() {
     const audio = this.state.audioPlayer;
 
-    // Обновление прогресса
+    
     audio.addEventListener('timeupdate', () => {
         if (audio.duration && !isNaN(audio.duration)) {
             const progress = (audio.currentTime / audio.duration) * 100;
@@ -265,7 +265,7 @@ setupAudioPlayer() {
         }
     });
 
-    // Загрузка метаданных
+    
     audio.addEventListener('loadedmetadata', () => {
         this.elements.totalTime.textContent = this.formatTime(audio.duration);
         
@@ -278,7 +278,7 @@ setupAudioPlayer() {
         }
     });
 
-    // Изменение кнопки Play/Pause
+    
     audio.addEventListener('play', () => {
         this.isPlaying = true;
         this.elements.playPauseBtn.textContent = '⏸';
@@ -289,7 +289,7 @@ setupAudioPlayer() {
         this.elements.playPauseBtn.textContent = '▶';
     });
 
-    // Когда эпизод закончился
+    
     audio.addEventListener('ended', () => {
         this.isPlaying = false;
         this.elements.playPauseBtn.textContent = '▶';
@@ -419,5 +419,53 @@ renderDetails(podcast) {
                 this.playEpisode(episode, podcast);
             }
         });
+    });
+}
+
+playEpisode(episode, podcast) {
+    if (!episode.audio) {
+        alert('This episode has no audio available.');
+        return;
+    }
+
+    const audio = this.state.audioPlayer;
+    const oldEpisode = this.state.currentEpisode;
+
+    
+    if (oldEpisode && oldEpisode.id === episode.id) {
+        this.togglePlayback();
+        return;
+    }
+
+    
+    if (oldEpisode && audio.currentTime > 0) {
+        this.state.saveProgress(oldEpisode.id, audio.currentTime);
+    }
+
+    
+    this.state.currentEpisode = episode;
+    this.state.saveCurrentEpisodeId(episode.id);
+    
+    audio.pause();
+    audio.src = episode.audio;
+    
+    
+    this.elements.player.classList.remove('hidden');
+    this.elements.playerTitle.textContent = episode.title || 'Untitled Episode';
+    this.elements.playerPodcast.textContent = podcast.title || 'Podcast';
+    this.updatePlaylistToggle();
+
+    
+    const savedProgress = this.state.getProgress(episode.id);
+    if (savedProgress > 0) {
+        const resumeTime = Math.max(0, savedProgress - CONFIG.RESUME_OFFSET);
+        audio.currentTime = resumeTime;
+    }
+
+    audio.load();
+    audio.play().catch(err => {
+        console.warn('Autoplay prevented:', err);
+        this.elements.playPauseBtn.textContent = '▶';
+        this.isPlaying = false;
     });
 }
