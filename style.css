@@ -252,6 +252,56 @@ body {
     font-size: 16px;
 }
 
+/* Podcast Hero */
+.podcast-hero {
+    display: flex;
+    gap: 24px;
+    margin: 20px 0 40px;
+    padding: 24px;
+    background: #1a1a1a;
+    border-radius: 12px;
+}
+
+.podcast-hero img {
+    width: 180px;
+    height: 180px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.podcast-hero-info {
+    flex: 1;
+}
+
+.podcast-hero-info h2 {
+    font-size: 24px;
+    margin-bottom: 12px;
+}
+
+.podcast-hero-info p {
+    color: #b3b3b3;
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+/* Detail Button */
+.detail-btn {
+    background: #1ed760;
+    color: #000;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    margin-top: 8px;
+    transition: background 0.2s;
+}
+
+.detail-btn:hover {
+    background: #1db954;
+}
+
 /* Episodes List */
 .episodes-list {
     display: flex;
@@ -264,12 +314,8 @@ body {
     background: #1a1a1a;
     padding: 16px 20px;
     border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s;
     border: 1px solid transparent;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    transition: all 0.2s;
 }
 
 .episode-item:hover {
@@ -277,32 +323,69 @@ body {
     border-color: #1ed760;
 }
 
-.episode-item .episode-info {
-    flex: 1;
+.episode-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
 }
 
-.episode-item h4 {
+.episode-header h3 {
     font-size: 16px;
-    margin-bottom: 6px;
+    flex: 1;
+    margin-right: 16px;
 }
 
-.episode-item .episode-meta {
+.episode-date {
+    color: #b3b3b3;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.episode-item p {
     color: #b3b3b3;
     font-size: 14px;
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.episode-actions {
     display: flex;
-    gap: 20px;
-    flex-wrap: wrap;
+    gap: 10px;
 }
 
-.episode-item .play-icon {
-    font-size: 24px;
-    margin-left: 16px;
+.play-btn, .add-btn {
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.play-btn {
+    background: #1ed760;
+    color: #000;
+}
+
+.play-btn:hover {
+    background: #1db954;
+}
+
+.add-btn {
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #3a3a3a;
+}
+
+.add-btn:hover {
+    background: #3a3a3a;
+}
+
+.add-btn:disabled {
     opacity: 0.5;
-    transition: opacity 0.2s;
-}
-
-.episode-item:hover .play-icon {
-    opacity: 1;
+    cursor: default;
 }
 
 /* Playlist Page */
@@ -334,28 +417,40 @@ body {
     border: 1px solid #2a2a2a;
 }
 
-.playlist-item .episode-info {
+.playlist-item-info {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
     cursor: pointer;
 }
 
-.playlist-item h4 {
-    font-size: 16px;
-    margin-bottom: 4px;
+.playlist-item-info strong {
+    font-size: 15px;
 }
 
-.playlist-item .episode-meta {
+.playlist-item-info span {
     color: #b3b3b3;
-    font-size: 14px;
+    font-size: 13px;
+}
+
+.playlist-item-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.playlist-item .play-btn {
+    padding: 6px 12px;
+    font-size: 16px;
 }
 
 .playlist-item .remove-btn {
     background: none;
     border: none;
     color: #ff4444;
-    font-size: 20px;
+    font-size: 18px;
     cursor: pointer;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 4px;
     transition: background 0.2s;
 }
