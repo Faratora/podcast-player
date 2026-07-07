@@ -1,16 +1,24 @@
 const CONFIG = {
     API_KEY: window.__PODCAST_API_KEY__ || '',
-    BASE_URL: 'https://listen-api-test.listennotes.com/api/v2',
+    BASE_URL: 'https://listen-api.listennotes.com/api/v2',
     DEBOUNCE_DELAY: 300,
+    RESUME_OFFSET: 10,
 };
+
+const PROGRESS_KEY = 'podcast_progress';
 
 class PodcastApp {
     constructor() {
         this.currentPage = 'landing';
+        this.searchQuery = '';
+        this.currentPodcastId = null;
+        this.currentEpisodePubDate = null;
         this.playlist = JSON.parse(localStorage.getItem('podcast_playlist') || '[]');
         this.audio = new Audio();
         this.audio.preload = 'metadata';
-        this.currentPageNum = 1;
+        this.currentPageNum = 0;
+        this.nextPageNumber = 1;
+        this.nextOffset = 0;
         this.hasMore = true;
         this.isSearching = false;
         this.searchTimeout = null;
@@ -46,8 +54,11 @@ class PodcastApp {
         return this.apiFetch(url);
     }
 
-    async loadPodcastEpisodes(id, offset = 0) {
-        const url = `${CONFIG.BASE_URL}/podcasts/${id}/episodes?offset=${offset}&sort_by_pub_date=asc`;
+    async loadPodcastEpisodes(id, pubDate) {
+        let url = `${CONFIG.BASE_URL}/podcasts/${id}`;
+        if (pubDate) {
+            url += `?next_episode_pub_date=${pubDate}`;
+        }
         return this.apiFetch(url);
     }
 
@@ -73,13 +84,19 @@ class PodcastApp {
                 if (q) {
                     this.navigateTo('landing');
                     this.isSearching = true;
-                    this.currentPageNum = 1;
+                    this.currentPageNum = 0;
+                    this.nextPageNumber = 1;
+                    this.nextOffset = 0;
+                    this.searchQuery = q;
                     this.hasMore = true;
                     this.el('podcast-grid').innerHTML = '';
                     this.loadSearchResults(q);
                 } else {
                     this.isSearching = false;
-                    this.currentPageNum = 1;
+                    this.currentPageNum = 0;
+                    this.nextPageNumber = 1;
+                    this.nextOffset = 0;
+                    this.searchQuery = '';
                     this.hasMore = true;
                     this.el('podcast-grid').innerHTML = '';
                     this.loadPodcasts();
@@ -122,13 +139,9 @@ class PodcastApp {
                 this.el('progress-fill').style.width = `${pct}%`;
                 this.el('current-time').textContent = this.formatTime(this.audio.currentTime);
 
-                // Save playback position
+                // Save playback position for current episode
                 if (this.currentEpisodeId && this.audio.currentTime > 5) {
-                    const saved = JSON.parse(localStorage.getItem('podcast_current_episode') || '{}');
-                    if (saved.id === this.currentEpisodeId) {
-                        saved.currentTime = this.audio.currentTime;
-                        localStorage.setItem('podcast_current_episode', JSON.stringify(saved));
-                    }
+                    this.saveProgress(this.currentEpisodeId, this.audio.currentTime);
                 }
             }
         });
@@ -148,7 +161,6 @@ class PodcastApp {
         this.audio.addEventListener('ended', () => {
             this.el('play-pause-btn').textContent = '▶';
             this.el('progress-fill').style.width = '0%';
-            localStorage.removeItem('podcast_current_episode');
             this.currentEpisodeId = null;
         });
     }
@@ -159,9 +171,8 @@ class PodcastApp {
         document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
         this.el(`${page}-page`).classList.add('active');
         this.currentPage = page;
-        if (page === 'landing') {
-            this.el('player').classList.add('hidden');
-        }
+        this.currentPodcastId = null;
+        this.currentEpisodePubDate = null;
     }
 
     // --- Rendering ---
@@ -188,6 +199,8 @@ class PodcastApp {
 
     async showPodcastDetails(id) {
         this.navigateTo('details');
+        this.currentPodcastId = id;
+        this.currentEpisodePubDate = null;
         this.showLoading(true);
 
         try {
@@ -195,8 +208,8 @@ class PodcastApp {
             const episodes = data.episodes || [];
 
             // Podcast info
-            const podcast = episodes.length > 0 ? episodes[0].podcast : null;
-            if (podcast) {
+            const podcast = data.podcast || {};
+            if (podcast.name) {
                 this.el('podcast-details').innerHTML = `
                     <div class="podcast-hero">
                         <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name)}" />
@@ -222,7 +235,7 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}">▶ Play</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}">▶ Play</button>
                         <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
                     </div>
                 `;
@@ -232,7 +245,7 @@ class PodcastApp {
             // Bind play buttons
             list.querySelectorAll('.play-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast);
+                    this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id);
                 });
             });
 
@@ -250,6 +263,9 @@ class PodcastApp {
                     btn.disabled = true;
                 });
             });
+
+            // Store next_episode_pub_date for pagination
+            this.currentEpisodePubDate = data.next_episode_pub_date || null;
         } catch (err) {
             console.error(err);
             this.el('podcast-details').innerHTML = '<p style="color:#ff4444">Failed to load podcast details.</p>';
@@ -281,7 +297,7 @@ class PodcastApp {
                     <span>${this.escape(ep.podcast)}</span>
                 </div>
                 <div class="playlist-item-actions">
-                    <button class="play-btn" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}">▶</button>
+                    <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}">▶</button>
                     <button class="remove-btn" data-idx="${idx}">✕</button>
                 </div>
             `;
@@ -290,8 +306,7 @@ class PodcastApp {
 
         container.querySelectorAll('.play-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast);
-                this.navigateTo('landing');
+                this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id);
             });
         });
 
@@ -306,28 +321,18 @@ class PodcastApp {
 
     // --- Playback ---
 
-    playEpisode(url, title, podcast) {
+    playEpisode(url, title, podcast, episodeId) {
         this.audio.src = url;
         this.audio.play();
         this.el('player-title').textContent = title;
         this.el('player-podcast').textContent = podcast;
-        this.el('player').classList.remove('hidden');
-        this.currentEpisodeId = title + '-' + podcast;
+        this.currentEpisodeId = episodeId;
 
-        // Restore saved position if available
-        const saved = JSON.parse(localStorage.getItem('podcast_current_episode') || '{}');
-        if (saved.id === this.currentEpisodeId && saved.currentTime > 5) {
-            this.audio.currentTime = saved.currentTime;
+        // Restore saved position with 10s offset
+        const saved = this.getProgress(episodeId);
+        if (saved > 5) {
+            this.audio.currentTime = Math.max(0, saved - CONFIG.RESUME_OFFSET);
         }
-
-        // Save episode info
-        localStorage.setItem('podcast_current_episode', JSON.stringify({
-            id: this.currentEpisodeId,
-            currentTime: 0,
-            title,
-            podcast,
-            url,
-        }));
     }
 
     togglePlay() {
@@ -340,6 +345,19 @@ class PodcastApp {
 
     seek(seconds) {
         this.audio.currentTime = Math.max(0, this.audio.currentTime + seconds);
+    }
+
+    // --- Progress ---
+
+    getProgress(episodeId) {
+        const data = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+        return data[episodeId] || 0;
+    }
+
+    saveProgress(episodeId, position) {
+        const data = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+        data[episodeId] = position;
+        localStorage.setItem(PROGRESS_KEY, JSON.stringify(data));
     }
 
     togglePlaylistBtn() {
@@ -358,13 +376,14 @@ class PodcastApp {
     async loadSearchResults(query) {
         this.showLoading(true);
         try {
-            const url = `${CONFIG.BASE_URL}/search?q=${encodeURIComponent(query)}&type=podcast&offset=${this.currentPageNum * 10}`;
+            const url = `${CONFIG.BASE_URL}/search?q=${encodeURIComponent(query)}&type=podcast&offset=${this.nextOffset}`;
             const data = await this.apiFetch(url);
             const podcasts = data.results?.filter(r => r.type === 'podcast') || [];
-            if (this.currentPageNum === 1) {
+            if (this.nextOffset === 0) {
                 this.el('podcast-grid').innerHTML = '';
             }
             this.renderPodcasts(podcasts);
+            this.nextOffset = data.next_offset || 0;
             this.hasMore = data.has_next;
             this.el('search-status').textContent = data.total ? `Found ${data.total} podcasts` : '';
         } catch (err) {
@@ -378,14 +397,80 @@ class PodcastApp {
 
     handleScroll() {
         if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-            if (!this.hasMore) return;
-            if (this.isSearching) return; // no infinite scroll for search
             if (this.el('loading-indicator').style.display === 'block') return;
 
-            this.currentPageNum++;
-            if (this.currentPage === 'landing') {
-                this.loadPodcasts(this.currentPageNum);
+            // Episode pagination on details page
+            if (this.currentPage === 'details' && this.currentPodcastId && this.currentEpisodePubDate) {
+                this.loadMoreEpisodes();
             }
+            // Podcast pagination on landing page
+            else if (this.currentPage === 'landing' && !this.isSearching && this.nextPageNumber) {
+                this.loadPodcasts(this.nextPageNumber);
+            }
+            // Search pagination
+            else if (this.isSearching && this.hasMore) {
+                this.nextOffset += 10;
+                this.loadSearchResults(this.searchQuery);
+            }
+        }
+    }
+
+    async loadMoreEpisodes() {
+        if (!this.currentPodcastId || !this.currentEpisodePubDate) return;
+        this.showLoading(true);
+        try {
+            const data = await this.loadPodcastEpisodes(this.currentPodcastId, this.currentEpisodePubDate);
+            const episodes = data.episodes || [];
+            const list = this.el('episodes-list');
+
+            episodes.forEach(ep => {
+                const item = document.createElement('div');
+                item.className = 'episode-item';
+                const isInPlaylist = this.playlist.some(e => e.id === ep.id);
+                item.innerHTML = `
+                    <div class="episode-header">
+                        <h3>${this.escape(ep.title)}</h3>
+                        <span class="episode-date">${this.formatDate(ep.publish_date)}</span>
+                    </div>
+                    <p>${this.escape(ep.description)}</p>
+                    <div class="episode-actions">
+                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}">▶ Play</button>
+                        <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+
+            // Bind new play buttons
+            list.querySelectorAll('.play-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id);
+                });
+            });
+
+            // Bind new add buttons
+            list.querySelectorAll('.add-btn').forEach(btn => {
+                if (!btn.dataset.bound) {
+                    btn.dataset.bound = 'true';
+                    btn.addEventListener('click', () => {
+                        this.addToPlaylist({
+                            id: btn.dataset.id,
+                            title: btn.dataset.title,
+                            podcast: btn.dataset.podcast,
+                            audio: btn.dataset.url,
+                            image: btn.dataset.image,
+                        });
+                        btn.textContent = '✓ In List';
+                        btn.disabled = true;
+                    });
+                }
+            });
+
+            this.currentEpisodePubDate = data.next_episode_pub_date || null;
+        } catch (err) {
+            console.error('Failed to load more episodes:', err);
+        } finally {
+            this.showLoading(false);
         }
     }
 
@@ -398,7 +483,8 @@ class PodcastApp {
                 this.el('podcast-grid').innerHTML = '';
             }
             this.renderPodcasts(podcasts);
-            this.hasMore = data.has_next;
+            this.nextPageNumber = data.next_page_number || null;
+            this.hasMore = !!this.nextPageNumber;
             this.el('search-status').textContent = data.total ? `Showing ${data.total} podcasts` : '';
         } catch (err) {
             console.error('Failed to load podcasts:', err);
