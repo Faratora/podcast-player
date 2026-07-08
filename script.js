@@ -42,6 +42,7 @@ class PodcastApp {
         this.isSearching = false;
         this.searchTimeout = null;
         this.currentEpisodeId = null;
+        this.currentPlayerEpisode = null;
 
         this.cache = new Map();
         this.cacheTTL = 5 * 60 * 1000;
@@ -394,7 +395,7 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}">▶ Play</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">▶ Play</button>
                         <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
                     </div>
                 `;
@@ -404,7 +405,7 @@ class PodcastApp {
             
             list.querySelectorAll('.play-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id);
+                    this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id, btn.dataset.image);
                 });
             });
 
@@ -460,7 +461,7 @@ class PodcastApp {
                     <span>${this.escape(ep.podcast)}</span>
                 </div>
                 <div class="playlist-item-actions">
-                    <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}">▶</button>
+                    <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.image)}">▶</button>
                     <button class="remove-btn" data-idx="${idx}">✕</button>
                 </div>
             `;
@@ -469,7 +470,7 @@ class PodcastApp {
 
         container.querySelectorAll('.play-btn').forEach(btn => {
             btn.addEventListener('click', () => {
-                this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id);
+                this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id, btn.dataset.image);
             });
         });
 
@@ -484,7 +485,7 @@ class PodcastApp {
 
     
 
-    playEpisode(url, title, podcast, episodeId) {
+    playEpisode(url, title, podcast, episodeId, image) {
         this.audio.src = url;
         this.audio.play().catch((err) => {
             console.warn('Playback failed:', err);
@@ -494,8 +495,9 @@ class PodcastApp {
         if (playerTitle) playerTitle.textContent = title;
         if (playerPodcast) playerPodcast.textContent = podcast;
         this.currentEpisodeId = episodeId;
+        this.currentPlayerEpisode = { id: episodeId, title, podcast, audio: url, image: image || '' };
 
-        
+        // Restore saved position with 10s offset
         const saved = this.getProgress(episodeId);
         if (saved > 5) {
             this.audio.currentTime = Math.max(0, saved - CONFIG.RESUME_OFFSET);
@@ -528,7 +530,13 @@ class PodcastApp {
     }
 
     togglePlaylistBtn() {
-       
+        if (!this.currentPlayerEpisode) return;
+        this.addToPlaylist(this.currentPlayerEpisode);
+        const btn = this.el('playlist-toggle-btn');
+        if (btn) {
+            btn.classList.add('active');
+            setTimeout(() => btn.classList.remove('active'), 1000);
+        }
     }
 
     addToPlaylist(episode) {
@@ -608,7 +616,7 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}">▶ Play</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">▶ Play</button>
                         <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
                     </div>
                 `;
@@ -618,7 +626,7 @@ class PodcastApp {
             
             list.querySelectorAll('.play-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id);
+                    this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id, btn.dataset.image);
                 });
             });
 
