@@ -387,7 +387,10 @@ class PodcastApp {
                 item.innerHTML = `
                     <div class="episode-header">
                         <h3>${this.escape(ep.title)}</h3>
-                        <span class="episode-date">${this.formatDate(ep.publish_date)}</span>
+                        <div class="episode-meta">
+                            <span class="episode-date">${this.formatDate(ep.publish_date)}</span>
+                            ${ep.duration ? `<span class="episode-duration">${this.formatDuration(ep.duration)}</span>` : ''}
+                        </div>
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
@@ -598,7 +601,10 @@ class PodcastApp {
                 item.innerHTML = `
                     <div class="episode-header">
                         <h3>${this.escape(ep.title)}</h3>
-                        <span class="episode-date">${this.formatDate(ep.publish_date)}</span>
+                        <div class="episode-meta">
+                            <span class="episode-date">${this.formatDate(ep.publish_date)}</span>
+                            ${ep.duration ? `<span class="episode-duration">${this.formatDuration(ep.duration)}</span>` : ''}
+                        </div>
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
@@ -687,6 +693,17 @@ class PodcastApp {
         if (!dateStr) return '';
         const d = new Date(dateStr);
         return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    formatDuration(seconds) {
+        if (!seconds || isNaN(seconds)) return '';
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = Math.floor(seconds % 60);
+        if (h > 0) {
+            return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+        return `${m}:${s.toString().padStart(2, '0')}`;
     }
 }
 

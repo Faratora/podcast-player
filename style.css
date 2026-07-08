@@ -339,9 +339,23 @@ body {
     margin-right: 16px;
 }
 
+.episode-header .episode-meta {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-shrink: 0;
+}
+
 .episode-date {
     color: #b3b3b3;
     font-size: 13px;
+    white-space: nowrap;
+}
+
+.episode-duration {
+    color: #1ed760;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
 
