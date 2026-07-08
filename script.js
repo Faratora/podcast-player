@@ -7,13 +7,32 @@ const CONFIG = {
 
 const PROGRESS_KEY = 'podcast_progress';
 
+
+const storage = {
+    get(key, fallback = null) {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : fallback;
+        } catch {
+            return fallback;
+        }
+    },
+    set(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+        } catch {
+            // Storage full or unavailable
+        }
+    },
+};
+
 class PodcastApp {
     constructor() {
         this.currentPage = 'landing';
         this.searchQuery = '';
         this.currentPodcastId = null;
         this.currentEpisodePubDate = null;
-        this.playlist = JSON.parse(localStorage.getItem('podcast_playlist') || '[]');
+        this.playlist = storage.get('podcast_playlist', []);
         this.audio = new Audio();
         this.audio.preload = 'metadata';
         this.currentPageNum = 0;
@@ -29,8 +48,6 @@ class PodcastApp {
 
         this.init();
     }
-
-    // --- API ---
 
     async apiFetch(url) {
         const cached = this.cache.get(url);
@@ -61,8 +78,6 @@ class PodcastApp {
         }
         return this.apiFetch(url);
     }
-
-    // --- DOM ---
 
     el(id) {
         return document.getElementById(id);
@@ -180,12 +195,12 @@ class PodcastApp {
             playlistToggleBtn.addEventListener('click', () => this.togglePlaylistBtn());
         }
 
-        // Scroll
+       
         window.addEventListener('scroll', () => this.handleScroll());
 
-        // Keyboard
+       
         document.addEventListener('keydown', (e) => {
-            if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+            if ((e.code === 'Space' || e.key === ' ') && !e.target.matches('input, textarea')) {
                 e.preventDefault();
                 this.togglePlay();
             }
@@ -201,7 +216,7 @@ class PodcastApp {
                 if (progressFill) progressFill.style.width = `${pct}%`;
                 if (currentTimeEl) currentTimeEl.textContent = this.formatTime(this.audio.currentTime);
 
-                // Save playback position for current episode
+                
                 if (this.currentEpisodeId && this.audio.currentTime > 5) {
                     this.saveProgress(this.currentEpisodeId, this.audio.currentTime);
                 }
@@ -231,13 +246,13 @@ class PodcastApp {
             this.currentEpisodeId = null;
         });
 
-        // Handle autoplay policy errors
+        
         this.audio.addEventListener('error', (e) => {
             console.warn('Audio error:', e);
         });
     }
 
-    // --- Navigation (History API Router) ---
+    
 
     navigateTo(page, state = {}) {
         const routes = {
@@ -247,10 +262,10 @@ class PodcastApp {
         };
         const url = routes[page] || '/';
 
-        // Update browser history
+        
         history.pushState({ page, ...state }, '', url);
 
-        // Transition pages
+       
         this.transitionPage(page);
     }
 
@@ -258,7 +273,7 @@ class PodcastApp {
         const pages = document.querySelectorAll('.page');
         const activePage = document.querySelector('.page.active');
 
-        // Animate out current page
+        
         if (activePage) {
             activePage.style.opacity = '0';
             activePage.style.transform = 'translateY(-10px)';
@@ -287,7 +302,7 @@ class PodcastApp {
             this.currentPodcastId = null;
             this.currentEpisodePubDate = null;
 
-            // Scroll to top on page change
+            
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 150);
     }
@@ -296,14 +311,14 @@ class PodcastApp {
         const state = event.state || { page: 'landing' };
         this.transitionPage(state.page);
 
-        // Restore state data
+        
         if (state.id && state.page === 'details') {
             this.currentPodcastId = state.id;
             this.showPodcastDetails(state.id);
         }
     }
 
-    // --- Rendering ---
+    
 
     showLoading(show) {
         const indicator = this.el('loading-indicator');
@@ -342,7 +357,7 @@ class PodcastApp {
             const data = await this.loadPodcastEpisodes(id);
             const episodes = data.episodes || [];
 
-            // Podcast info
+           
             const podcast = data.podcast || {};
             if (podcast.name) {
                 const podcastDetails = this.el('podcast-details');
@@ -359,7 +374,7 @@ class PodcastApp {
                 }
             }
 
-            // Episodes
+           
             const list = this.el('episodes-list');
             if (!list) return;
             list.innerHTML = '';
@@ -381,14 +396,14 @@ class PodcastApp {
                 list.appendChild(item);
             });
 
-            // Bind play buttons
+            
             list.querySelectorAll('.play-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id);
                 });
             });
 
-            // Bind add buttons
+           
             list.querySelectorAll('.add-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     this.addToPlaylist({
@@ -403,7 +418,7 @@ class PodcastApp {
                 });
             });
 
-            // Store next_episode_pub_date for pagination
+            
             this.currentEpisodePubDate = data.next_episode_pub_date || null;
         } catch (err) {
             console.error(err);
@@ -456,13 +471,13 @@ class PodcastApp {
         container.querySelectorAll('.remove-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 this.playlist.splice(parseInt(btn.dataset.idx), 1);
-                localStorage.setItem('podcast_playlist', JSON.stringify(this.playlist));
+                storage.set('podcast_playlist', this.playlist);
                 this.renderPlaylist();
             });
         });
     }
 
-    // --- Playback ---
+    
 
     playEpisode(url, title, podcast, episodeId) {
         this.audio.src = url;
@@ -475,7 +490,7 @@ class PodcastApp {
         if (playerPodcast) playerPodcast.textContent = podcast;
         this.currentEpisodeId = episodeId;
 
-        // Restore saved position with 10s offset
+        
         const saved = this.getProgress(episodeId);
         if (saved > 5) {
             this.audio.currentTime = Math.max(0, saved - CONFIG.RESUME_OFFSET);
@@ -494,31 +509,31 @@ class PodcastApp {
         this.audio.currentTime = Math.max(0, this.audio.currentTime + seconds);
     }
 
-    // --- Progress ---
+   
 
     getProgress(episodeId) {
-        const data = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+        const data = storage.get(PROGRESS_KEY, {});
         return data[episodeId] || 0;
     }
 
     saveProgress(episodeId, position) {
-        const data = JSON.parse(localStorage.getItem(PROGRESS_KEY) || '{}');
+        const data = storage.get(PROGRESS_KEY, {});
         data[episodeId] = position;
-        localStorage.setItem(PROGRESS_KEY, JSON.stringify(data));
+        storage.set(PROGRESS_KEY, data);
     }
 
     togglePlaylistBtn() {
-        // Simplified: no state.currentEpisode in this version
+       
     }
 
     addToPlaylist(episode) {
         if (!this.playlist.some(e => e.id === episode.id)) {
             this.playlist.push(episode);
-            localStorage.setItem('podcast_playlist', JSON.stringify(this.playlist));
+            storage.set('podcast_playlist', this.playlist);
         }
     }
 
-    // --- Search ---
+    
 
     async loadSearchResults(query) {
         this.showLoading(true);
@@ -542,22 +557,22 @@ class PodcastApp {
         }
     }
 
-    // --- Infinite Scroll ---
+    
 
     handleScroll() {
         if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
             const loadingIndicator = this.el('loading-indicator');
             if (loadingIndicator && loadingIndicator.style.display === 'block') return;
 
-            // Episode pagination on details page
+            
             if (this.currentPage === 'details' && this.currentPodcastId && this.currentEpisodePubDate) {
                 this.loadMoreEpisodes();
             }
-            // Podcast pagination on landing page
+            
             else if (this.currentPage === 'landing' && !this.isSearching && this.nextPageNumber) {
                 this.loadPodcasts(this.nextPageNumber);
             }
-            // Search pagination
+            
             else if (this.isSearching && this.hasMore) {
                 this.nextOffset += 10;
                 this.loadSearchResults(this.searchQuery);
@@ -592,14 +607,14 @@ class PodcastApp {
                 list.appendChild(item);
             });
 
-            // Bind new play buttons
+            
             list.querySelectorAll('.play-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     this.playEpisode(btn.dataset.url, btn.dataset.title, btn.dataset.podcast, btn.dataset.id);
                 });
             });
 
-            // Bind new add buttons
+           
             list.querySelectorAll('.add-btn').forEach(btn => {
                 if (!btn.dataset.bound) {
                     btn.dataset.bound = 'true';
@@ -646,7 +661,7 @@ class PodcastApp {
         }
     }
 
-    // --- Helpers ---
+   
 
     escape(str) {
         if (!str) return '';
@@ -673,5 +688,5 @@ class PodcastApp {
     }
 }
 
-// --- Init ---
+
 const app = new PodcastApp();
