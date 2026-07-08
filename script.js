@@ -330,9 +330,11 @@ class PodcastApp {
         podcasts.forEach(podcast => {
             const card = document.createElement('div');
             card.className = 'podcast-card';
+            const author = podcast.publisher || podcast.creator || 'Unknown';
             card.innerHTML = `
                 <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name)}" />
                 <h3>${this.escape(podcast.name)}</h3>
+                <span class="podcast-author">${this.escape(author)}</span>
                 <p>${this.escape(podcast.description)}</p>
                 <button class="detail-btn" data-id="${podcast.id}">View Episodes</button>
             `;
