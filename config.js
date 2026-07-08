@@ -1,1 +1,2 @@
-window.__PODCAST_API_KEY__ = 'f4cec67619d14a99b1f06bdba5607ce6';
+// API key loaded from config.local.js (git-ignored)
+window.__PODCAST_API_KEY__ = window.__PODCAST_API_KEY__ || '';
