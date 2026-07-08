@@ -73,6 +73,39 @@ class PodcastApp {
         this.renderPlaylist();
         this.loadPodcasts();
         this.setupAudio();
+        this.setupRouter();
+    }
+
+    setupRouter() {
+        window.addEventListener('popstate', (e) => this.handlePopState(e));
+        this.handleInitialRoute();
+    }
+
+    handleInitialRoute() {
+        const state = history.state;
+        if (state && state.page) {
+            this.transitionPage(state.page);
+            if (state.id) {
+                this.currentPodcastId = state.id;
+                this.showPodcastDetails(state.id);
+            }
+        } else {
+            const path = window.location.pathname;
+            if (path.startsWith('/podcast/')) {
+                const id = path.split('/podcast/')[1];
+                if (id) {
+                    // Direct load — skip animation, go straight to details
+                    this.currentPage = 'details';
+                    this.currentPodcastId = id;
+                    this.showPodcastDetails(id);
+                    return;
+                }
+            } else if (path === '/playlist') {
+                this.currentPage = 'playlist';
+                this.transitionPage('playlist');
+                return;
+            }
+        }
     }
 
     bindEvents() {
@@ -165,14 +198,70 @@ class PodcastApp {
         });
     }
 
-    // --- Navigation ---
+    // --- Navigation (History API Router) ---
 
-    navigateTo(page) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        this.el(`${page}-page`).classList.add('active');
-        this.currentPage = page;
-        this.currentPodcastId = null;
-        this.currentEpisodePubDate = null;
+    navigateTo(page, state = {}) {
+        const routes = {
+            landing: '/',
+            details: `/podcast/${state.id || ''}`,
+            playlist: '/playlist',
+        };
+        const url = routes[page] || '/';
+
+        // Update browser history
+        history.pushState({ page, ...state }, '', url);
+
+        // Transition pages
+        this.transitionPage(page);
+    }
+
+    transitionPage(page) {
+        const pages = document.querySelectorAll('.page');
+        const activePage = document.querySelector('.page.active');
+
+        // Animate out current page
+        if (activePage) {
+            activePage.style.opacity = '0';
+            activePage.style.transform = 'translateY(-10px)';
+        }
+
+        setTimeout(() => {
+            pages.forEach(p => {
+                p.classList.remove('active');
+                p.style.opacity = '';
+                p.style.transform = '';
+            });
+
+            const target = this.el(`${page}-page`);
+            if (target) {
+                target.classList.add('active');
+                // Animate in
+                target.style.opacity = '0';
+                target.style.transform = 'translateY(10px)';
+                requestAnimationFrame(() => {
+                    target.style.opacity = '';
+                    target.style.transform = '';
+                });
+            }
+
+            this.currentPage = page;
+            this.currentPodcastId = null;
+            this.currentEpisodePubDate = null;
+
+            // Scroll to top on page change
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 150);
+    }
+
+    handlePopState(event) {
+        const state = event.state || { page: 'landing' };
+        this.transitionPage(state.page);
+
+        // Restore state data
+        if (state.id && state.page === 'details') {
+            this.currentPodcastId = state.id;
+            this.showPodcastDetails(state.id);
+        }
     }
 
     // --- Rendering ---
@@ -198,7 +287,7 @@ class PodcastApp {
     }
 
     async showPodcastDetails(id) {
-        this.navigateTo('details');
+        this.navigateTo('details', { id });
         this.currentPodcastId = id;
         this.currentEpisodePubDate = null;
         this.showLoading(true);
