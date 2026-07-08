@@ -109,49 +109,76 @@ class PodcastApp {
     }
 
     bindEvents() {
-        // Search
-        this.el('search-input').addEventListener('input', (e) => {
-            clearTimeout(this.searchTimeout);
-            const q = e.target.value.trim();
-            this.searchTimeout = setTimeout(() => {
-                if (q) {
-                    this.navigateTo('landing');
-                    this.isSearching = true;
-                    this.currentPageNum = 0;
-                    this.nextPageNumber = 1;
-                    this.nextOffset = 0;
-                    this.searchQuery = q;
-                    this.hasMore = true;
-                    this.el('podcast-grid').innerHTML = '';
-                    this.loadSearchResults(q);
-                } else {
-                    this.isSearching = false;
-                    this.currentPageNum = 0;
-                    this.nextPageNumber = 1;
-                    this.nextOffset = 0;
-                    this.searchQuery = '';
-                    this.hasMore = true;
-                    this.el('podcast-grid').innerHTML = '';
-                    this.loadPodcasts();
-                }
-            }, CONFIG.DEBOUNCE_DELAY);
-        });
+        const searchInput = this.el('search-input');
+        const navHome = this.el('nav-home');
+        const navPlaylist = this.el('nav-playlist');
+        const backButton = this.el('back-button');
+        const playPauseBtn = this.el('play-pause-btn');
+        const rewindBtn = this.el('rewind-btn');
+        const forwardBtn = this.el('forward-btn');
+        const progressBar = this.el('progress-bar');
+        const playlistToggleBtn = this.el('playlist-toggle-btn');
 
-        // Nav
-        this.el('nav-home').addEventListener('click', () => this.navigateTo('landing'));
-        this.el('nav-playlist').addEventListener('click', () => this.navigateTo('playlist'));
-        this.el('back-button').addEventListener('click', () => this.navigateTo('landing'));
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(this.searchTimeout);
+                const q = e.target.value.trim();
+                this.searchTimeout = setTimeout(() => {
+                    if (q) {
+                        this.navigateTo('landing');
+                        this.isSearching = true;
+                        this.currentPageNum = 0;
+                        this.nextPageNumber = 1;
+                        this.nextOffset = 0;
+                        this.searchQuery = q;
+                        this.hasMore = true;
+                        const grid = this.el('podcast-grid');
+                        if (grid) grid.innerHTML = '';
+                        this.loadSearchResults(q);
+                    } else {
+                        this.isSearching = false;
+                        this.currentPageNum = 0;
+                        this.nextPageNumber = 1;
+                        this.nextOffset = 0;
+                        this.searchQuery = '';
+                        this.hasMore = true;
+                        const grid = this.el('podcast-grid');
+                        if (grid) grid.innerHTML = '';
+                        this.loadPodcasts();
+                    }
+                }, CONFIG.DEBOUNCE_DELAY);
+            });
+        }
 
-        // Player controls
-        this.el('play-pause-btn').addEventListener('click', () => this.togglePlay());
-        this.el('rewind-btn').addEventListener('click', () => this.seek(-15));
-        this.el('forward-btn').addEventListener('click', () => this.seek(15));
-        this.el('progress-bar').addEventListener('click', (e) => {
-            const rect = this.el('progress-bar').getBoundingClientRect();
-            const pct = (e.clientX - rect.left) / rect.width;
-            this.audio.currentTime = pct * this.audio.duration;
-        });
-        this.el('playlist-toggle-btn').addEventListener('click', () => this.togglePlaylistBtn());
+        if (navHome) {
+            navHome.addEventListener('click', () => this.navigateTo('landing'));
+        }
+        if (navPlaylist) {
+            navPlaylist.addEventListener('click', () => this.navigateTo('playlist'));
+        }
+        if (backButton) {
+            backButton.addEventListener('click', () => this.navigateTo('landing'));
+        }
+
+        if (playPauseBtn) {
+            playPauseBtn.addEventListener('click', () => this.togglePlay());
+        }
+        if (rewindBtn) {
+            rewindBtn.addEventListener('click', () => this.seek(-15));
+        }
+        if (forwardBtn) {
+            forwardBtn.addEventListener('click', () => this.seek(15));
+        }
+        if (progressBar) {
+            progressBar.addEventListener('click', (e) => {
+                const rect = progressBar.getBoundingClientRect();
+                const pct = (e.clientX - rect.left) / rect.width;
+                this.audio.currentTime = pct * this.audio.duration;
+            });
+        }
+        if (playlistToggleBtn) {
+            playlistToggleBtn.addEventListener('click', () => this.togglePlaylistBtn());
+        }
 
         // Scroll
         window.addEventListener('scroll', () => this.handleScroll());
@@ -169,8 +196,10 @@ class PodcastApp {
         this.audio.addEventListener('timeupdate', () => {
             if (this.audio.duration) {
                 const pct = (this.audio.currentTime / this.audio.duration) * 100;
-                this.el('progress-fill').style.width = `${pct}%`;
-                this.el('current-time').textContent = this.formatTime(this.audio.currentTime);
+                const progressFill = this.el('progress-fill');
+                const currentTimeEl = this.el('current-time');
+                if (progressFill) progressFill.style.width = `${pct}%`;
+                if (currentTimeEl) currentTimeEl.textContent = this.formatTime(this.audio.currentTime);
 
                 // Save playback position for current episode
                 if (this.currentEpisodeId && this.audio.currentTime > 5) {
@@ -180,21 +209,31 @@ class PodcastApp {
         });
 
         this.audio.addEventListener('loadedmetadata', () => {
-            this.el('total-time').textContent = this.formatTime(this.audio.duration);
+            const totalTimeEl = this.el('total-time');
+            if (totalTimeEl) totalTimeEl.textContent = this.formatTime(this.audio.duration);
         });
 
         this.audio.addEventListener('play', () => {
-            this.el('play-pause-btn').textContent = '⏸';
+            const playPauseBtn = this.el('play-pause-btn');
+            if (playPauseBtn) playPauseBtn.textContent = '⏸';
         });
 
         this.audio.addEventListener('pause', () => {
-            this.el('play-pause-btn').textContent = '▶';
+            const playPauseBtn = this.el('play-pause-btn');
+            if (playPauseBtn) playPauseBtn.textContent = '▶';
         });
 
         this.audio.addEventListener('ended', () => {
-            this.el('play-pause-btn').textContent = '▶';
-            this.el('progress-fill').style.width = '0%';
+            const playPauseBtn = this.el('play-pause-btn');
+            const progressFill = this.el('progress-fill');
+            if (playPauseBtn) playPauseBtn.textContent = '▶';
+            if (progressFill) progressFill.style.width = '0%';
             this.currentEpisodeId = null;
+        });
+
+        // Handle autoplay policy errors
+        this.audio.addEventListener('error', (e) => {
+            console.warn('Audio error:', e);
         });
     }
 
@@ -267,7 +306,8 @@ class PodcastApp {
     // --- Rendering ---
 
     showLoading(show) {
-        this.el('loading-indicator').style.display = show ? 'block' : 'none';
+        const indicator = this.el('loading-indicator');
+        if (indicator) indicator.style.display = show ? 'block' : 'none';
     }
 
     renderPodcasts(podcasts) {
@@ -281,13 +321,19 @@ class PodcastApp {
                 <p>${this.escape(podcast.description)}</p>
                 <button class="detail-btn" data-id="${podcast.id}">View Episodes</button>
             `;
-            card.querySelector('.detail-btn').addEventListener('click', () => this.showPodcastDetails(podcast.id));
+            const btn = card.querySelector('.detail-btn');
+            if (btn && podcast.id) {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.navigateTo('details', { id: podcast.id });
+                    this.showPodcastDetails(podcast.id);
+                });
+            }
             grid.appendChild(card);
         });
     }
 
     async showPodcastDetails(id) {
-        this.navigateTo('details', { id });
         this.currentPodcastId = id;
         this.currentEpisodePubDate = null;
         this.showLoading(true);
@@ -299,19 +345,23 @@ class PodcastApp {
             // Podcast info
             const podcast = data.podcast || {};
             if (podcast.name) {
-                this.el('podcast-details').innerHTML = `
-                    <div class="podcast-hero">
-                        <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name)}" />
-                        <div class="podcast-hero-info">
-                            <h2>${this.escape(podcast.name)}</h2>
-                            <p>${this.escape(podcast.description)}</p>
+                const podcastDetails = this.el('podcast-details');
+                if (podcastDetails) {
+                    podcastDetails.innerHTML = `
+                        <div class="podcast-hero">
+                            <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name)}" />
+                            <div class="podcast-hero-info">
+                                <h2>${this.escape(podcast.name)}</h2>
+                                <p>${this.escape(podcast.description)}</p>
+                            </div>
                         </div>
-                    </div>
-                `;
+                    `;
+                }
             }
 
             // Episodes
             const list = this.el('episodes-list');
+            if (!list) return;
             list.innerHTML = '';
             episodes.forEach(ep => {
                 const item = document.createElement('div');
@@ -357,7 +407,10 @@ class PodcastApp {
             this.currentEpisodePubDate = data.next_episode_pub_date || null;
         } catch (err) {
             console.error(err);
-            this.el('podcast-details').innerHTML = '<p style="color:#ff4444">Failed to load podcast details.</p>';
+            const podcastDetails = this.el('podcast-details');
+            if (podcastDetails) {
+                podcastDetails.innerHTML = '<p style="color:#ff4444">Failed to load podcast details.</p>';
+            }
         } finally {
             this.showLoading(false);
         }
@@ -366,6 +419,7 @@ class PodcastApp {
     renderPlaylist() {
         const container = this.el('playlist-items');
         const empty = this.el('playlist-empty');
+        if (!container || !empty) return;
         container.innerHTML = '';
 
         if (this.playlist.length === 0) {
@@ -412,9 +466,13 @@ class PodcastApp {
 
     playEpisode(url, title, podcast, episodeId) {
         this.audio.src = url;
-        this.audio.play();
-        this.el('player-title').textContent = title;
-        this.el('player-podcast').textContent = podcast;
+        this.audio.play().catch((err) => {
+            console.warn('Playback failed:', err);
+        });
+        const playerTitle = this.el('player-title');
+        const playerPodcast = this.el('player-podcast');
+        if (playerTitle) playerTitle.textContent = title;
+        if (playerPodcast) playerPodcast.textContent = podcast;
         this.currentEpisodeId = episodeId;
 
         // Restore saved position with 10s offset
@@ -426,7 +484,7 @@ class PodcastApp {
 
     togglePlay() {
         if (this.audio.paused) {
-            this.audio.play();
+            this.audio.play().catch(() => {});
         } else {
             this.audio.pause();
         }
@@ -469,12 +527,14 @@ class PodcastApp {
             const data = await this.apiFetch(url);
             const podcasts = data.results?.filter(r => r.type === 'podcast') || [];
             if (this.nextOffset === 0) {
-                this.el('podcast-grid').innerHTML = '';
+                const grid = this.el('podcast-grid');
+                if (grid) grid.innerHTML = '';
             }
             this.renderPodcasts(podcasts);
             this.nextOffset = data.next_offset || 0;
             this.hasMore = data.has_next;
-            this.el('search-status').textContent = data.total ? `Found ${data.total} podcasts` : '';
+            const searchStatus = this.el('search-status');
+            if (searchStatus) searchStatus.textContent = data.total ? `Found ${data.total} podcasts` : '';
         } catch (err) {
             console.error('Search failed:', err);
         } finally {
@@ -486,7 +546,8 @@ class PodcastApp {
 
     handleScroll() {
         if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
-            if (this.el('loading-indicator').style.display === 'block') return;
+            const loadingIndicator = this.el('loading-indicator');
+            if (loadingIndicator && loadingIndicator.style.display === 'block') return;
 
             // Episode pagination on details page
             if (this.currentPage === 'details' && this.currentPodcastId && this.currentEpisodePubDate) {
@@ -511,6 +572,7 @@ class PodcastApp {
             const data = await this.loadPodcastEpisodes(this.currentPodcastId, this.currentEpisodePubDate);
             const episodes = data.episodes || [];
             const list = this.el('episodes-list');
+            if (!list) return;
 
             episodes.forEach(ep => {
                 const item = document.createElement('div');
@@ -568,13 +630,15 @@ class PodcastApp {
         try {
             const data = await this.loadBestPodcasts(page);
             const podcasts = data.podcasts || [];
-            if (page === 1) {
-                this.el('podcast-grid').innerHTML = '';
+            if (page === 1 || page === undefined || page === null) {
+                const grid = this.el('podcast-grid');
+                if (grid) grid.innerHTML = '';
             }
             this.renderPodcasts(podcasts);
             this.nextPageNumber = data.next_page_number || null;
             this.hasMore = !!this.nextPageNumber;
-            this.el('search-status').textContent = data.total ? `Showing ${data.total} podcasts` : '';
+            const searchStatus = this.el('search-status');
+            if (searchStatus) searchStatus.textContent = data.total ? `Showing ${data.total} podcasts` : '';
         } catch (err) {
             console.error('Failed to load podcasts:', err);
         } finally {
