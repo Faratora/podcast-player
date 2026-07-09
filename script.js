@@ -1,6 +1,6 @@
 const CONFIG = {
     API_KEY: window.__PODCAST_API_KEY__ || '',
-    BASE_URL: 'https://listen-api.listennotes.com/api/v2',
+    BASE_URL: 'https://listen-api-test.listennotes.com/api/v2',
     DEBOUNCE_DELAY: 300,
     RESUME_OFFSET: 10,
 };
@@ -47,6 +47,10 @@ class PodcastApp {
         this.cache = new Map();
         this.cacheTTL = 5 * 60 * 1000;
 
+        this.pendingRequests = new Map();
+        this.lastRequestTime = 0;
+        this.minRequestInterval = 1100;
+
         this.init();
     }
 
@@ -55,12 +59,42 @@ class PodcastApp {
         if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
             return cached.data;
         }
+        if (this.pendingRequests.has(url)) {
+            return this.pendingRequests.get(url);
+        }
+        const promise = this.throttledFetch(url);
+        this.pendingRequests.set(url, promise);
+        try {
+            return await promise;
+        } finally {
+            this.pendingRequests.delete(url);
+        }
+    }
+
+    async throttledFetch(url) {
+        const wait = this.minRequestInterval - (Date.now() - this.lastRequestTime);
+        if (wait > 0) {
+            await new Promise(resolve => setTimeout(resolve, wait));
+        }
+        return this.fetchWithRetry(url);
+    }
+
+    async fetchWithRetry(url, attempt = 0) {
+        const maxAttempts = 3;
+        const baseDelay = 1000;
+        this.lastRequestTime = Date.now();
         const res = await fetch(url, {
             headers: {
                 'Accept': 'application/json',
                 'X-ListenAPI-Key': CONFIG.API_KEY,
             },
         });
+        if (res.status === 429) {
+            if (attempt >= maxAttempts) throw new Error(`API error: ${res.status}`);
+            const delay = baseDelay * Math.pow(2, attempt);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            return this.fetchWithRetry(url, attempt + 1);
+        }
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         const data = await res.json();
         this.cache.set(url, { data, timestamp: Date.now() });
@@ -490,6 +524,8 @@ class PodcastApp {
         this.audio.play().catch((err) => {
             console.warn('Playback failed:', err);
         });
+        const player = this.el('player');
+        if (player) player.classList.remove('hidden');
         const playerTitle = this.el('player-title');
         const playerPodcast = this.el('player-podcast');
         if (playerTitle) playerTitle.textContent = title;
