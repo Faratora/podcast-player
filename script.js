@@ -1,6 +1,6 @@
 const CONFIG = {
     API_KEY: window.__PODCAST_API_KEY__ || '',
-    BASE_URL: 'https://listen-api-test.listennotes.com/api/v2',
+    BASE_URL: window.__PODCAST_BASE_URL__ || 'https://listen-api-test.listennotes.com/api/v2',
     DEBOUNCE_DELAY: 300,
     RESUME_OFFSET: 10,
 };
@@ -83,12 +83,9 @@ class PodcastApp {
         const maxAttempts = 3;
         const baseDelay = 1000;
         this.lastRequestTime = Date.now();
-        const res = await fetch(url, {
-            headers: {
-                'Accept': 'application/json',
-                'X-ListenAPI-Key': CONFIG.API_KEY,
-            },
-        });
+        const headers = { 'Accept': 'application/json' };
+        if (CONFIG.API_KEY) headers['X-ListenAPI-Key'] = CONFIG.API_KEY;
+        const res = await fetch(url, { headers });
         if (res.status === 429) {
             if (attempt >= maxAttempts) throw new Error(`API error: ${res.status}`);
             const delay = baseDelay * Math.pow(2, attempt);
@@ -367,8 +364,8 @@ class PodcastApp {
             card.className = 'podcast-card';
             const author = podcast.publisher || podcast.creator || 'Unknown';
             card.innerHTML = `
-                <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name)}" />
-                <h3>${this.escape(podcast.name)}</h3>
+                <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
+                <h3>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h3>
                 <span class="podcast-author">${this.escape(author)}</span>
                 <p>${this.escape(podcast.description)}</p>
                 <button class="detail-btn" data-id="${podcast.id}">View Episodes</button>
@@ -396,14 +393,14 @@ class PodcastApp {
 
            
             const podcast = data.podcast || {};
-            if (podcast.name) {
+            if (podcast.name || podcast.title || podcast.title_original) {
                 const podcastDetails = this.el('podcast-details');
                 if (podcastDetails) {
                     podcastDetails.innerHTML = `
                         <div class="podcast-hero">
-                            <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name)}" />
+                            <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
                             <div class="podcast-hero-info">
-                                <h2>${this.escape(podcast.name)}</h2>
+                                <h2>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h2>
                                 <p>${this.escape(podcast.description)}</p>
                             </div>
                         </div>
@@ -589,7 +586,16 @@ class PodcastApp {
         try {
             const url = `${CONFIG.BASE_URL}/search?q=${encodeURIComponent(query)}&type=podcast&offset=${this.nextOffset}`;
             const data = await this.apiFetch(url);
-            const podcasts = data.results?.filter(r => r.type === 'podcast') || [];
+            const podcasts = (data.results || [])
+                .map(r => r.type === 'podcast' ? r : (r.podcast || null))
+                .filter(Boolean)
+                .map(p => ({
+                    id: p.id,
+                    name: p.title_original || p.title || p.name,
+                    publisher: p.publisher_original || p.publisher || p.artist,
+                    image: p.image || p.thumbnail,
+                    description: p.description_original || p.description,
+                }));
             if (this.nextOffset === 0) {
                 const grid = this.el('podcast-grid');
                 if (grid) grid.innerHTML = '';
