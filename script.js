@@ -656,9 +656,11 @@ class PodcastApp {
         try {
             const url = `${CONFIG.BASE_URL}/search?q=${encodeURIComponent(query)}&type=podcast&offset=${this.nextOffset}`;
             const data = await this.apiFetch(url);
+            const seen = new Set();
             const podcasts = (data.results || [])
-                .map(r => r.type === 'podcast' ? r : (r.podcast || null))
-                .filter(Boolean)
+                // Search may return podcast objects, or episode objects with a nested podcast
+                .map(r => (r && r.podcast && r.podcast.id) ? r.podcast : r)
+                .filter(p => p && p.id && !seen.has(p.id) && seen.add(p.id))
                 .map(p => ({
                     id: p.id,
                     name: p.title_original || p.title || p.name,
@@ -666,15 +668,16 @@ class PodcastApp {
                     image: p.image || p.thumbnail,
                     description: p.description_original || p.description,
                 }));
-            if (this.nextOffset === 0) {
-                const grid = this.el('podcast-grid');
-                if (grid) grid.innerHTML = '';
-            }
+            const grid = this.el('podcast-grid');
+            if (grid) grid.innerHTML = '';
             this.renderPodcasts(podcasts);
-            this.nextOffset = data.next_offset || 0;
-            this.hasMore = data.has_next;
+            this.hasMore = false;
             const searchStatus = this.el('search-status');
-            if (searchStatus) searchStatus.textContent = data.total ? `Found ${data.total} podcasts` : '';
+            if (searchStatus) {
+                searchStatus.textContent = podcasts.length
+                    ? `Found ${podcasts.length} podcast${podcasts.length === 1 ? '' : 's'}`
+                    : 'No podcasts found';
+            }
         } catch (err) {
             console.error('Search failed:', err);
         } finally {
@@ -696,11 +699,6 @@ class PodcastApp {
             
             else if (this.currentPage === 'landing' && !this.isSearching && this.nextPageNumber) {
                 this.loadPodcasts(this.nextPageNumber);
-            }
-            
-            else if (this.isSearching && this.hasMore) {
-                this.nextOffset += 10;
-                this.loadSearchResults(this.searchQuery);
             }
         }
     }
