@@ -334,7 +334,7 @@ body {
 }
 
 .episode-header h3 {
-    font-size: 16px;
+    font-size: 24px;
     flex: 1;
     margin-right: 16px;
 }
@@ -498,8 +498,18 @@ body {
     margin: 0 auto;
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 5px;
     flex-wrap: wrap;
+    padding: 0 20px;
+}
+
+.player-top {
+    flex-basis: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    order: -1;
 }
 
 .player-info {
@@ -508,7 +518,7 @@ body {
 }
 
 .player-episode-title {
-    font-size: 14px;
+    font-size: 20px;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -521,7 +531,7 @@ body {
 }
 
 .player-controls {
-    flex: 1;
+    flex: 1 1 100%;
     display: flex;
     align-items: center;
     gap: 8px;
@@ -557,6 +567,16 @@ body {
 .player-btn.playlist-toggle {
     font-size: 20px;
     color: #b3b3b3;
+}
+
+.player-btn.close-player {
+    font-size: 16px;
+    color: #b3b3b3;
+}
+
+.player-btn.close-player:hover {
+    color: #ff4444;
+    background: rgba(255, 68, 68, 0.1);
 }
 
 .player-btn.playlist-toggle.active {

@@ -167,6 +167,7 @@ class PodcastApp {
         const forwardBtn = this.el('forward-btn');
         const progressBar = this.el('progress-bar');
         const playlistToggleBtn = this.el('playlist-toggle-btn');
+        const closePlayerBtn = this.el('close-player-btn');
 
         if (searchInput) {
             searchInput.addEventListener('input', (e) => {
@@ -227,6 +228,9 @@ class PodcastApp {
         }
         if (playlistToggleBtn) {
             playlistToggleBtn.addEventListener('click', () => this.togglePlaylistBtn());
+        }
+        if (closePlayerBtn) {
+            closePlayerBtn.addEventListener('click', () => this.closePlayer());
         }
 
        
@@ -436,8 +440,8 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">▶ Play</button>
-                        <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}▶ Play</button>
+                        <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}${isInPlaylist ? 'In PlayList' : '+ Add'}</button>
                     </div>
                 `;
                 list.appendChild(item);
@@ -617,6 +621,15 @@ class PodcastApp {
             btn.classList.add('active');
             setTimeout(() => btn.classList.remove('active'), 1000);
         }
+    }
+
+    closePlayer() {
+        this.audio.pause();
+        const player = this.el('player');
+        if (player) player.classList.add('hidden');
+        this.currentPlayerEpisode = null;
+        this.currentEpisodeId = null;
+        storage.set(PLAYER_KEY, null);
     }
 
     addToPlaylist(episode) {
