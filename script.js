@@ -148,7 +148,7 @@ class PodcastApp {
         return data;
     }
 
-    // Normalize a Podcast Index feed into the shape the UI expects
+    // Normalize a Podcast Index feed into the shape the UI expects 
     normFeed(f) {
         return {
             id: f.id,
