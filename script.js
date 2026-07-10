@@ -142,7 +142,7 @@ class PodcastApp {
             await new Promise(resolve => setTimeout(resolve, delay));
             return this.fetchWithRetry(url, attempt + 1);
         }
-        if (!res.ok) throw new Error(`API error: ${res.status}, ${CONFIG.PI_KEY} + | + ${CONFIG.PI_SECRET} `);
+        if (!res.ok) throw new Error(`API error: ${res.status}`);
         const data = await res.json();
         this.cache.set(url, { data, timestamp: Date.now() });
         return data;
