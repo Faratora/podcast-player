@@ -22,8 +22,11 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Generate Podcast Index config from secrets
+        env:
+          PI_KEY: ${{ secrets.PI_KEY }}
+          PI_SECRET: ${{ secrets.PI_SECRET }}
         run: |
-          cat > config.local.js <<'EOF'
+          cat > config.local.js <<EOF
           // Auto-generated at deploy time from repository secrets. Not committed.
           window.__PODCAST_PROVIDER__ = 'podcastindex';
           window.__PODCAST_PI_KEY__ = '$PI_KEY';
