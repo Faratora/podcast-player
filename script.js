@@ -6,6 +6,7 @@ const CONFIG = {
 };
 
 const PROGRESS_KEY = 'podcast_progress';
+const PLAYER_KEY = 'podcast_player';
 
 
 const storage = {
@@ -118,6 +119,7 @@ class PodcastApp {
     init() {
         this.bindEvents();
         this.renderPlaylist();
+        this.restorePlayer();
         this.loadPodcasts();
         this.setupAudio();
         this.setupRouter();
@@ -252,6 +254,7 @@ class PodcastApp {
                 if (this.currentEpisodeId && this.audio.currentTime > 5) {
                     this.saveProgress(this.currentEpisodeId, this.audio.currentTime);
                 }
+                this.savePlayerState();
             }
         });
 
@@ -370,6 +373,13 @@ class PodcastApp {
                 <p>${this.escape(podcast.description)}</p>
                 <button class="detail-btn" data-id="${podcast.id}">View Episodes</button>
             `;
+            if (podcast.id) {
+                card.style.cursor = 'pointer';
+                card.addEventListener('click', () => {
+                    this.navigateTo('details', { id: podcast.id });
+                    this.showPodcastDetails(podcast.id);
+                });
+            }
             const btn = card.querySelector('.detail-btn');
             if (btn && podcast.id) {
                 btn.addEventListener('click', (e) => {
@@ -529,11 +539,17 @@ class PodcastApp {
         if (playerPodcast) playerPodcast.textContent = podcast;
         this.currentEpisodeId = episodeId;
         this.currentPlayerEpisode = { id: episodeId, title, podcast, audio: url, image: image || '' };
+        this.savePlayerState();
 
-        // Restore saved position with 10s offset
+        // Restore saved position with 10s offset once metadata is available
         const saved = this.getProgress(episodeId);
         if (saved > 5) {
-            this.audio.currentTime = Math.max(0, saved - CONFIG.RESUME_OFFSET);
+            const resumeAt = Math.max(0, saved - CONFIG.RESUME_OFFSET);
+            this.audio.addEventListener('loadedmetadata', () => {
+                if (resumeAt < this.audio.duration) {
+                    this.audio.currentTime = resumeAt;
+                }
+            }, { once: true });
         }
     }
 
@@ -560,6 +576,37 @@ class PodcastApp {
         const data = storage.get(PROGRESS_KEY, {});
         data[episodeId] = position;
         storage.set(PROGRESS_KEY, data);
+    }
+
+    savePlayerState() {
+        if (!this.currentPlayerEpisode) return;
+        storage.set(PLAYER_KEY, {
+            ...this.currentPlayerEpisode,
+            position: this.audio.currentTime || 0,
+        });
+    }
+
+    restorePlayer() {
+        const ep = storage.get(PLAYER_KEY, null);
+        if (!ep || !ep.id) return;
+        this.currentPlayerEpisode = ep;
+        this.currentEpisodeId = ep.id;
+        const player = this.el('player');
+        if (player) player.classList.remove('hidden');
+        const playerTitle = this.el('player-title');
+        const playerPodcast = this.el('player-podcast');
+        if (playerTitle) playerTitle.textContent = ep.title;
+        if (playerPodcast) playerPodcast.textContent = ep.podcast;
+        this.audio.src = ep.audio;
+        this.audio.load();
+        const pos = ep.position || 0;
+        this.audio.addEventListener('loadedmetadata', () => {
+            if (pos > 0 && pos < this.audio.duration) {
+                this.audio.currentTime = pos;
+                const currentTimeEl = this.el('current-time');
+                if (currentTimeEl) currentTimeEl.textContent = this.formatTime(pos);
+            }
+        }, { once: true });
     }
 
     togglePlaylistBtn() {
