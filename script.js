@@ -260,7 +260,7 @@ class PodcastApp {
     updateBackButtons(page) {
         const canGoBack = this.navStack.length > 0;
         document.querySelectorAll('.back-button').forEach(btn => {
-            // On the landing (home) page only show Back when there is history
+            
             btn.style.display = (page === 'landing' && !canGoBack) ? 'none' : '';
         });
     }
