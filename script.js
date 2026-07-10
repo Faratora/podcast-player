@@ -126,34 +126,28 @@ class PodcastApp {
     }
 
     setupRouter() {
-        window.addEventListener('popstate', (e) => this.handlePopState(e));
-        this.handleInitialRoute();
+        window.addEventListener('hashchange', () => this.handleRoute());
+        this.handleRoute();
     }
 
-    handleInitialRoute() {
-        const state = history.state;
-        if (state && state.page) {
-            this.transitionPage(state.page);
-            if (state.id) {
-                this.currentPodcastId = state.id;
-                this.showPodcastDetails(state.id);
-            }
+    parseHash() {
+        const hash = window.location.hash.replace(/^#/, '');
+        if (hash.startsWith('/podcast/')) {
+            const id = hash.slice('/podcast/'.length);
+            return { page: 'details', id: id || null };
+        }
+        if (hash === '/playlist') return { page: 'playlist' };
+        return { page: 'landing' };
+    }
+
+    handleRoute() {
+        const { page, id } = this.parseHash();
+        if (page === 'details' && id) {
+            this.transitionPage('details');
+            this.currentPodcastId = id;
+            this.showPodcastDetails(id);
         } else {
-            const path = window.location.pathname;
-            if (path.startsWith('/podcast/')) {
-                const id = path.split('/podcast/')[1];
-                if (id) {
-                    // Direct load — skip animation, go straight to details
-                    this.currentPage = 'details';
-                    this.currentPodcastId = id;
-                    this.showPodcastDetails(id);
-                    return;
-                }
-            } else if (path === '/playlist') {
-                this.currentPage = 'playlist';
-                this.transitionPage('playlist');
-                return;
-            }
+            this.transitionPage(page);
         }
     }
 
@@ -294,18 +288,14 @@ class PodcastApp {
     
 
     navigateTo(page, state = {}) {
-        const routes = {
-            landing: '/',
-            details: `/podcast/${state.id || ''}`,
-            playlist: '/playlist',
-        };
-        const url = routes[page] || '/';
-
-        
-        history.pushState({ page, ...state }, '', url);
-
-       
-        this.transitionPage(page);
+        const hash = page === 'details'
+            ? `#/podcast/${state.id || ''}`
+            : (page === 'playlist' ? '#/playlist' : '#/');
+        if (window.location.hash === hash) {
+            this.handleRoute();
+        } else {
+            window.location.hash = hash;
+        }
     }
 
     transitionPage(page) {
@@ -346,19 +336,6 @@ class PodcastApp {
         }, 150);
     }
 
-    handlePopState(event) {
-        const state = event.state || { page: 'landing' };
-        this.transitionPage(state.page);
-
-        
-        if (state.id && state.page === 'details') {
-            this.currentPodcastId = state.id;
-            this.showPodcastDetails(state.id);
-        }
-    }
-
-    
-
     showLoading(show) {
         const indicator = this.el('loading-indicator');
         if (indicator) indicator.style.display = show ? 'block' : 'none';
@@ -381,7 +358,6 @@ class PodcastApp {
                 card.style.cursor = 'pointer';
                 card.addEventListener('click', () => {
                     this.navigateTo('details', { id: podcast.id });
-                    this.showPodcastDetails(podcast.id);
                 });
             }
             const btn = card.querySelector('.detail-btn');
@@ -389,7 +365,6 @@ class PodcastApp {
                 btn.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this.navigateTo('details', { id: podcast.id });
-                    this.showPodcastDetails(podcast.id);
                 });
             }
             grid.appendChild(card);
@@ -440,8 +415,8 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}▶ Play</button>
-                        <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}${isInPlaylist ? 'In PlayList' : '+ Add'}</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">▶ Play</button>
+                        <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
                     </div>
                 `;
                 list.appendChild(item);
@@ -506,7 +481,7 @@ class PodcastApp {
                     <span>${this.escape(ep.podcast)}</span>
                 </div>
                 <div class="playlist-item-actions">
-                    <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.image)}">▶</button>
+                    <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.image))}">▶</button>
                     <button class="remove-btn" data-idx="${idx}">✕</button>
                 </div>
             `;
@@ -719,8 +694,8 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">▶ Play</button>
-                        <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">▶ Play</button>
+                        <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
                     </div>
                 `;
                 list.appendChild(item);
@@ -783,14 +758,18 @@ class PodcastApp {
    
 
     escape(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     safeUrl(url) {
-        return url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23333"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="#888" font-size="14">🎙️</text></svg>';
+        const value = url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23333"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="#888" font-size="14">🎙️</text></svg>';
+        return this.escape(value);
     }
 
     formatTime(seconds) {
