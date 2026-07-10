@@ -39,7 +39,7 @@ body {
 }
 
 .nav-brand {
-    font-size: 50px;
+    font-size: 22px;
     font-weight: bold;
     cursor: pointer;
     color: #1ed760;
@@ -59,7 +59,7 @@ body {
     background: none;
     border: none;
     color: #b3b3b3;
-    font-size: 34px;
+    font-size: 16px;
     cursor: pointer;
     padding: 8px 16px;
     border-radius: 20px;

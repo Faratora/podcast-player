@@ -1,5 +1,3 @@
-// Optional local config. Loaded via XHR so a missing (gitignored) file does
-// not produce a 404 console error on fresh clones.
 function loadLocalConfig() {
     const cfg = {};
     try {
@@ -407,11 +405,6 @@ class PodcastApp {
             if (playPauseBtn) playPauseBtn.textContent = '▶';
             if (progressFill) progressFill.style.width = '0%';
             this.currentEpisodeId = null;
-        });
-
-        
-        this.audio.addEventListener('error', () => {
-            // Source unavailable / decode failure: keep player state, no console noise.
         });
     }
 
