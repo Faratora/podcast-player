@@ -142,7 +142,7 @@ class PodcastApp {
     // Normalize a Podcast Index episode item into the shape the UI expects
     normEpisode(it, feed) {
         return {
-            id: it.id,
+            id: String(it.id),
             title: it.title,
             audio: it.enclosureUrl,
             publish_date: it.datePublished ? it.datePublished * 1000 : null,
