@@ -457,7 +457,7 @@ class PodcastApp {
             card.className = 'podcast-card';
             const author = podcast.publisher || podcast.creator || 'Unknown';
             card.innerHTML = `
-                <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
+                <img src="${this.escape(this.safeUrl(podcast.image))}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
                 <h3>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h3>
                 <span class="podcast-author">${this.escape(author)}</span>
                 <p>${this.escape(podcast.description)}</p>
@@ -496,7 +496,7 @@ class PodcastApp {
                 if (podcastDetails) {
                     podcastDetails.innerHTML = `
                         <div class="podcast-hero">
-                            <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
+                            <img src="${this.escape(this.safeUrl(podcast.image))}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
                             <div class="podcast-hero-info">
                                 <h2>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h2>
                                 <p>${this.escape(podcast.description)}</p>
@@ -524,8 +524,8 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">▶ Play</button>
-                        <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">▶ Play</button>
+                        <button class="add-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
                     </div>
                 `;
                 list.appendChild(item);
@@ -590,7 +590,7 @@ class PodcastApp {
                     <span>${this.escape(ep.podcast)}</span>
                 </div>
                 <div class="playlist-item-actions">
-                    <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.image))}">▶</button>
+                    <button class="play-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.image))}">▶</button>
                     <button class="remove-btn" data-idx="${idx}">✕</button>
                 </div>
             `;
@@ -809,8 +809,8 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">▶ Play</button>
-                        <button class="add-btn" data-id="${ep.id}" data-url="${ep.audio}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">▶ Play</button>
+                        <button class="add-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.escape(this.safeUrl(ep.podcast_image))}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
                     </div>
                 `;
                 list.appendChild(item);
@@ -882,9 +882,9 @@ class PodcastApp {
             .replace(/'/g, '&#39;');
     }
 
+    // Returns a raw URL (or an inline placeholder). Callers must escape() it for HTML.
     safeUrl(url) {
-        const value = url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23333"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="#888" font-size="14">🎙️</text></svg>';
-        return this.escape(value);
+        return url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23333"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="#888" font-size="14">🎙️</text></svg>';
     }
 
     formatTime(seconds) {
