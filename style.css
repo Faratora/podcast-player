@@ -223,8 +223,6 @@ body {
 #podcast-details {
     display: flex;
     gap: 30px;
-    margin: 20px 0 40px;
-    padding: 20px;
     background: #1a1a1a;
     border-radius: 12px;
 }

@@ -148,6 +148,8 @@ class PodcastApp {
             this.currentPodcastId = id;
             this.showPodcastDetails(id);
         } else {
+            this.currentPodcastId = null;
+            this.currentEpisodePubDate = null;
             this.transitionPage(page);
         }
         this.updateBackButtons(page);
@@ -320,14 +322,16 @@ class PodcastApp {
     
 
     navigateTo(page, state = {}) {
-        const hash = this.routeFor(page, state);
-        if (window.location.hash === hash) {
+        const current = this.parseHash();
+        const sameRoute = current.page === page &&
+            (page !== 'details' || current.id === (state.id || null));
+        if (sameRoute) {
             this.handleRoute();
-        } else {
-            // Remember where we came from so Back can return there
-            this.navStack.push(this.parseHash());
-            window.location.hash = hash;
+            return;
         }
+        // Remember where we came from so Back can return there
+        this.navStack.push(current);
+        window.location.hash = this.routeFor(page, state);
     }
 
     transitionPage(page) {
@@ -360,8 +364,6 @@ class PodcastApp {
             }
 
             this.currentPage = page;
-            this.currentPodcastId = null;
-            this.currentEpisodePubDate = null;
 
             
             window.scrollTo({ top: 0, behavior: 'smooth' });
