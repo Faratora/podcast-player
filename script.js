@@ -623,6 +623,7 @@ class PodcastApp {
         if (!this.playlist.some(e => e.id === episode.id)) {
             this.playlist.push(episode);
             storage.set('podcast_playlist', this.playlist);
+            this.renderPlaylist();
         }
     }
 
