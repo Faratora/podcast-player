@@ -1,10 +1,33 @@
+// Optional local config. Loaded via XHR so a missing (gitignored) file does
+// not produce a 404 console error on fresh clones.
+function loadLocalConfig() {
+    const cfg = {};
+    try {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', 'config.local.js', false);
+        xhr.send();
+        if (xhr.status !== 200) return cfg;
+        const text = xhr.responseText;
+        const re = /window\.__(\w+)__\s*=\s*([\s\S]*?);/g;
+        let m;
+        while ((m = re.exec(text)) !== null) {
+            try {
+                cfg[m[1]] = new Function('return (' + m[2] + ');')();
+            } catch { /* ignore malformed entry */ }
+        }
+    } catch { /* file absent or fetch blocked */ }
+    return cfg;
+}
+
+const LOCAL_CONFIG = loadLocalConfig();
+
 const CONFIG = {
-    PROVIDER: window.__PODCAST_PROVIDER__ || 'listennotes',
-    API_KEY: window.__PODCAST_API_KEY__ || '',
-    BASE_URL: window.__PODCAST_BASE_URL__ || 'https://listen-api-test.listennotes.com/api/v2',
-    PI_KEY: window.__PODCAST_PI_KEY__ || '',
-    PI_SECRET: window.__PODCAST_PI_SECRET__ || '',
-    PI_BASE_URL: window.__PODCAST_PI_BASE_URL__ || 'https://api.podcastindex.org/api/1.0',
+    PROVIDER: LOCAL_CONFIG.PODCAST_PROVIDER || window.__PODCAST_PROVIDER__ || 'listennotes',
+    API_KEY: LOCAL_CONFIG.PODCAST_API_KEY || window.__PODCAST_API_KEY__ || '',
+    BASE_URL: LOCAL_CONFIG.PODCAST_BASE_URL || window.__PODCAST_BASE_URL__ || 'https://listen-api-test.listennotes.com/api/v2',
+    PI_KEY: LOCAL_CONFIG.PODCAST_PI_KEY || window.__PODCAST_PI_KEY__ || '',
+    PI_SECRET: LOCAL_CONFIG.PODCAST_PI_SECRET || window.__PODCAST_PI_SECRET__ || '',
+    PI_BASE_URL: LOCAL_CONFIG.PODCAST_PI_BASE_URL || window.__PODCAST_PI_BASE_URL__ || 'https://api.podcastindex.org/api/1.0',
     DEBOUNCE_DELAY: 300,
     RESUME_OFFSET: 10,
 };
@@ -307,11 +330,9 @@ class PodcastApp {
         if (navPlaylist) {
             navPlaylist.addEventListener('click', () => this.navigateTo('playlist'));
         }
-        if (backButton) {
-            document.querySelectorAll('.back-button').forEach(btn => {
-                btn.addEventListener('click', () => this.goBack());
-            });
-        }
+        document.querySelectorAll('.back-button').forEach(btn => {
+            btn.addEventListener('click', () => this.goBack());
+        });
 
         if (playPauseBtn) {
             playPauseBtn.addEventListener('click', () => this.togglePlay());
@@ -389,8 +410,8 @@ class PodcastApp {
         });
 
         
-        this.audio.addEventListener('error', (e) => {
-            console.warn('Audio error:', e);
+        this.audio.addEventListener('error', () => {
+            // Source unavailable / decode failure: keep player state, no console noise.
         });
     }
 
@@ -616,8 +637,8 @@ class PodcastApp {
 
     playEpisode(url, title, podcast, episodeId, image) {
         this.audio.src = url;
-        this.audio.play().catch((err) => {
-            console.warn('Playback failed:', err);
+        this.audio.play().catch(() => {
+            // Autoplay may be blocked until user interacts; ignore silently.
         });
         const player = this.el('player');
         if (player) player.classList.remove('hidden');
@@ -699,11 +720,15 @@ class PodcastApp {
 
     togglePlaylistBtn() {
         if (!this.currentPlayerEpisode) return;
-        this.addToPlaylist(this.currentPlayerEpisode);
+        const added = this.addToPlaylist(this.currentPlayerEpisode);
         const btn = this.el('playlist-toggle-btn');
         if (btn) {
             btn.classList.add('active');
             setTimeout(() => btn.classList.remove('active'), 1000);
+        }
+        if (!added) {
+            const status = this.el('player-podcast');
+            if (status) status.title = 'Already in playlist';
         }
     }
 
@@ -717,11 +742,15 @@ class PodcastApp {
     }
 
     addToPlaylist(episode) {
-        if (!this.playlist.some(e => e.id === episode.id)) {
-            this.playlist.push(episode);
-            storage.set('podcast_playlist', this.playlist);
+        if (this.playlist.some(e => e.id === episode.id)) return false;
+        this.playlist.push(episode);
+        storage.set('podcast_playlist', this.playlist);
+        if (this.currentPage === 'details' && this.currentPodcastId) {
+            this.showPodcastDetails(this.currentPodcastId);
+        } else {
             this.renderPlaylist();
         }
+        return true;
     }
 
     
