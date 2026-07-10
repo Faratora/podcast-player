@@ -1,9 +1,22 @@
 const CONFIG = {
+    PROVIDER: window.__PODCAST_PROVIDER__ || 'listennotes',
     API_KEY: window.__PODCAST_API_KEY__ || '',
     BASE_URL: window.__PODCAST_BASE_URL__ || 'https://listen-api-test.listennotes.com/api/v2',
+    PI_KEY: window.__PODCAST_PI_KEY__ || '',
+    PI_SECRET: window.__PODCAST_PI_SECRET__ || '',
+    PI_BASE_URL: window.__PODCAST_PI_BASE_URL__ || 'https://api.podcastindex.org/api/1.0',
     DEBOUNCE_DELAY: 300,
     RESUME_OFFSET: 10,
 };
+
+const IS_PI = CONFIG.PROVIDER === 'podcastindex';
+
+// SHA-1 hex digest (used for Podcast Index request signing) via Web Crypto
+async function sha1Hex(str) {
+    const bytes = new TextEncoder().encode(str);
+    const digest = await crypto.subtle.digest('SHA-1', bytes);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 const PROGRESS_KEY = 'podcast_progress';
 const PLAYER_KEY = 'podcast_player';
@@ -51,7 +64,7 @@ class PodcastApp {
 
         this.pendingRequests = new Map();
         this.lastRequestTime = 0;
-        this.minRequestInterval = 1100;
+        this.minRequestInterval = IS_PI ? 0 : 1100;
 
         this.init();
     }
@@ -81,12 +94,26 @@ class PodcastApp {
         return this.fetchWithRetry(url);
     }
 
+    async buildAuthHeaders() {
+        const headers = { 'Accept': 'application/json' };
+        if (IS_PI) {
+            if (CONFIG.PI_KEY && CONFIG.PI_SECRET) {
+                const authDate = Math.floor(Date.now() / 1000);
+                headers['X-Auth-Key'] = CONFIG.PI_KEY;
+                headers['X-Auth-Date'] = String(authDate);
+                headers['Authorization'] = await sha1Hex(CONFIG.PI_KEY + CONFIG.PI_SECRET + authDate);
+            }
+        } else if (CONFIG.API_KEY) {
+            headers['X-ListenAPI-Key'] = CONFIG.API_KEY;
+        }
+        return headers;
+    }
+
     async fetchWithRetry(url, attempt = 0) {
         const maxAttempts = 3;
         const baseDelay = 1000;
         this.lastRequestTime = Date.now();
-        const headers = { 'Accept': 'application/json' };
-        if (CONFIG.API_KEY) headers['X-ListenAPI-Key'] = CONFIG.API_KEY;
+        const headers = await this.buildAuthHeaders();
         const res = await fetch(url, { headers });
         if (res.status === 429) {
             if (attempt >= maxAttempts) throw new Error(`API error: ${res.status}`);
@@ -100,12 +127,60 @@ class PodcastApp {
         return data;
     }
 
+    // Normalize a Podcast Index feed into the shape the UI expects
+    normFeed(f) {
+        return {
+            id: f.id,
+            name: f.title,
+            title: f.title,
+            publisher: f.author || f.ownerName,
+            image: f.image || f.artwork,
+            description: f.description,
+        };
+    }
+
+    // Normalize a Podcast Index episode item into the shape the UI expects
+    normEpisode(it, feed) {
+        return {
+            id: it.id,
+            title: it.title,
+            audio: it.enclosureUrl,
+            publish_date: it.datePublished ? it.datePublished * 1000 : null,
+            duration: it.duration,
+            description: it.description,
+            podcast: (feed && feed.title) || it.feedTitle || '',
+            podcast_image: (feed && (feed.image || feed.artwork)) || it.feedImage || it.image,
+        };
+    }
+
     async loadBestPodcasts(page) {
+        if (IS_PI) {
+            const data = await this.apiFetch(`${CONFIG.PI_BASE_URL}/podcasts/trending?max=40&lang=en`);
+            return { podcasts: (data.feeds || []).map(f => this.normFeed(f)), next_page_number: null };
+        }
         const url = `${CONFIG.BASE_URL}/best_podcasts?sort=recent_published_first&page=${page}`;
         return this.apiFetch(url);
     }
 
     async loadPodcastEpisodes(id, pubDate) {
+        if (IS_PI) {
+            const [podRes, epRes] = await Promise.all([
+                this.apiFetch(`${CONFIG.PI_BASE_URL}/podcasts/byfeedid?id=${id}`),
+                this.apiFetch(`${CONFIG.PI_BASE_URL}/episodes/byfeedid?id=${id}&max=50`),
+            ]);
+            const feed = podRes.feed || {};
+            return {
+                podcast: {
+                    id: feed.id,
+                    name: feed.title,
+                    title: feed.title,
+                    image: feed.image || feed.artwork,
+                    description: feed.description,
+                },
+                episodes: (epRes.items || []).map(it => this.normEpisode(it, feed)),
+                next_episode_pub_date: null,
+            };
+        }
         let url = `${CONFIG.BASE_URL}/podcasts/${id}`;
         if (pubDate) {
             url += `?next_episode_pub_date=${pubDate}`;
@@ -654,20 +729,28 @@ class PodcastApp {
     async loadSearchResults(query) {
         this.showLoading(true);
         try {
-            const url = `${CONFIG.BASE_URL}/search?q=${encodeURIComponent(query)}&type=podcast&offset=${this.nextOffset}`;
-            const data = await this.apiFetch(url);
             const seen = new Set();
-            const podcasts = (data.results || [])
-                // Search may return podcast objects, or episode objects with a nested podcast
-                .map(r => (r && r.podcast && r.podcast.id) ? r.podcast : r)
-                .filter(p => p && p.id && !seen.has(p.id) && seen.add(p.id))
-                .map(p => ({
-                    id: p.id,
-                    name: p.title_original || p.title || p.name,
-                    publisher: p.publisher_original || p.publisher || p.artist,
-                    image: p.image || p.thumbnail,
-                    description: p.description_original || p.description,
-                }));
+            let podcasts;
+            if (IS_PI) {
+                const data = await this.apiFetch(`${CONFIG.PI_BASE_URL}/search/byterm?q=${encodeURIComponent(query)}`);
+                podcasts = (data.feeds || [])
+                    .filter(f => f && f.id && !seen.has(f.id) && seen.add(f.id))
+                    .map(f => this.normFeed(f));
+            } else {
+                const url = `${CONFIG.BASE_URL}/search?q=${encodeURIComponent(query)}&type=podcast&offset=${this.nextOffset}`;
+                const data = await this.apiFetch(url);
+                podcasts = (data.results || [])
+                    // Search may return podcast objects, or episode objects with a nested podcast
+                    .map(r => (r && r.podcast && r.podcast.id) ? r.podcast : r)
+                    .filter(p => p && p.id && !seen.has(p.id) && seen.add(p.id))
+                    .map(p => ({
+                        id: p.id,
+                        name: p.title_original || p.title || p.name,
+                        publisher: p.publisher_original || p.publisher || p.artist,
+                        image: p.image || p.thumbnail,
+                        description: p.description_original || p.description,
+                    }));
+            }
             const grid = this.el('podcast-grid');
             if (grid) grid.innerHTML = '';
             this.renderPodcasts(podcasts);
