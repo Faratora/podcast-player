@@ -26,8 +26,8 @@ jobs:
           cat > config.local.js <<'EOF'
           // Auto-generated at deploy time from repository secrets. Not committed.
           window.__PODCAST_PROVIDER__ = 'podcastindex';
-          window.__PODCAST_PI_KEY__ = '${{ secrets.PI_KEY }}';
-          window.__PODCAST_PI_SECRET__ = '${{ secrets.PI_SECRET }}';
+          window.__PODCAST_PI_KEY__ = '$PI_KEY';
+          window.__PODCAST_PI_SECRET__ = '$PI_SECRET';
           window.__PODCAST_PI_BASE_URL__ = 'https://api.podcastindex.org/api/1.0';
           EOF
 
