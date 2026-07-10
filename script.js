@@ -44,6 +44,7 @@ class PodcastApp {
         this.searchTimeout = null;
         this.currentEpisodeId = null;
         this.currentPlayerEpisode = null;
+        this.navStack = [];
 
         this.cache = new Map();
         this.cacheTTL = 5 * 60 * 1000;
@@ -149,6 +150,35 @@ class PodcastApp {
         } else {
             this.transitionPage(page);
         }
+        this.updateBackButtons(page);
+    }
+
+    routeFor(page, state = {}) {
+        if (page === 'details') return `#/podcast/${state.id || ''}`;
+        if (page === 'playlist') return '#/playlist';
+        return '#/';
+    }
+
+    updateBackButtons(page) {
+        const canGoBack = this.navStack.length > 0;
+        document.querySelectorAll('.back-button').forEach(btn => {
+            // On the landing (home) page only show Back when there is history
+            btn.style.display = (page === 'landing' && !canGoBack) ? 'none' : '';
+        });
+    }
+
+    goBack() {
+        if (this.navStack.length === 0) {
+            if (this.parseHash().page !== 'landing') this.navigateTo('landing');
+            return;
+        }
+        const prev = this.navStack.pop();
+        const target = this.routeFor(prev.page, prev);
+        if (window.location.hash === target) {
+            this.handleRoute();
+        } else {
+            window.location.hash = target;
+        }
     }
 
     bindEvents() {
@@ -201,7 +231,9 @@ class PodcastApp {
             navPlaylist.addEventListener('click', () => this.navigateTo('playlist'));
         }
         if (backButton) {
-            backButton.addEventListener('click', () => this.navigateTo('landing'));
+            document.querySelectorAll('.back-button').forEach(btn => {
+                btn.addEventListener('click', () => this.goBack());
+            });
         }
 
         if (playPauseBtn) {
@@ -288,12 +320,12 @@ class PodcastApp {
     
 
     navigateTo(page, state = {}) {
-        const hash = page === 'details'
-            ? `#/podcast/${state.id || ''}`
-            : (page === 'playlist' ? '#/playlist' : '#/');
+        const hash = this.routeFor(page, state);
         if (window.location.hash === hash) {
             this.handleRoute();
         } else {
+            // Remember where we came from so Back can return there
+            this.navStack.push(this.parseHash());
             window.location.hash = hash;
         }
     }
