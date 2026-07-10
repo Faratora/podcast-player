@@ -1,0 +1,8 @@
+{
+  "commands": [
+    {
+      "command": "git.commitMessageFromTemplate",
+      "title": "Git: Create Commit Message with Date"
+    }
+  ]
+}

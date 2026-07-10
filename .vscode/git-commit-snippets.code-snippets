@@ -1,0 +1,9 @@
+{
+  "Git Commit with Date": {
+    "prefix": "gitcommit",
+    "body": [
+      "feat: add slider controls (${CURRENT_YEAR}-${CURRENT_MONTH}-${CURRENT_DATE})"
+    ],
+    "description": "Create git commit message with date"
+  }
+}
