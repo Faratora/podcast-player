@@ -247,6 +247,9 @@ class PodcastApp {
             this.currentPodcastId = null;
             this.currentEpisodePubDate = null;
             this.transitionPage(page);
+            if (page === 'playlist') {
+                this.renderPlaylist();
+            }
         }
         this.updateBackButtons(page);
     }
