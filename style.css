@@ -166,14 +166,18 @@ body {
 }
 
 .podcast-card .search-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
     background: #1ed760;
     color: #000;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 50%;
     margin-top: 6px;
+    line-height: 1;
 }
 
 .podcast-card p {
