@@ -165,6 +165,17 @@ body {
     text-overflow: ellipsis;
 }
 
+.podcast-card .search-badge {
+    display: inline-block;
+    background: #1ed760;
+    color: #000;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-top: 6px;
+}
+
 .podcast-card p {
     color: #b3b3b3;
     font-size: 14px;

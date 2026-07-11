@@ -477,8 +477,8 @@ class PodcastApp {
                 <img src="${this.escape(this.safeUrl(podcast.image))}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
                 <h3>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h3>
                 <span class="podcast-author">${this.escape(author)}</span>
+                ${this.isSearching ? '<span class="search-badge">+5</span>' : ''}
                 <p>${this.escape(podcast.description)}</p>
-                <button class="detail-btn" data-id="${podcast.id}">View Episodes</button>
             `;
             if (podcast.id) {
                 card.style.cursor = 'pointer';
