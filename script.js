@@ -477,7 +477,7 @@ class PodcastApp {
                 <img src="${this.escape(this.safeUrl(podcast.image))}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
                 <h3>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h3>
                 <span class="podcast-author">${this.escape(author)}</span>
-                ${this.isSearching ? '<span class="search-badge">+5</span>' : ''}
+                ${this.isSearching ? '<span class="search-badge">*</span>' : ''}
                 <p>${this.escape(podcast.description)}</p>
             `;
             if (podcast.id) {
