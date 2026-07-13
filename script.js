@@ -300,7 +300,6 @@ class PodcastApp {
                 const q = e.target.value.trim();
                 this.searchTimeout = setTimeout(() => {
                     if (q) {
-                        this.navigateTo('landing');
                         this.isSearching = true;
                         this.currentPageNum = 0;
                         this.nextPageNumber = 1;
