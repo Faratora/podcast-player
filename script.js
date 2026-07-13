@@ -475,7 +475,7 @@ class PodcastApp {
             card.className = 'podcast-card';
             const author = podcast.publisher || podcast.creator || 'Unknown';
             card.innerHTML = `
-                <img src="${this.safeUrl(this.escape(podcast.image))}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
+                <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" onerror="this.style.display='none'" />
                 <h3>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h3>
                 <span class="podcast-author">${this.escape(author)}</span>
                 ${this.isSearching ? '<span class="search-badge">☆</span>' : ''}
@@ -514,7 +514,7 @@ class PodcastApp {
                 if (podcastDetails) {
                     podcastDetails.innerHTML = `
                         <div class="podcast-hero">
-                <img src="${this.safeUrl(this.escape(podcast.image))}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" />
+                            <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" onerror="this.style.display='none'" />
                             <div class="podcast-hero-info">
                                 <h2>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h2>
                                 <p>${this.escape(podcast.description)}</p>
@@ -542,8 +542,8 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(this.escape(ep.podcast_image))}">▶ Play</button>
-                        <button class="add-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(this.escape(ep.podcast_image))}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">▶ Play</button>
+                        <button class="add-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
                     </div>
                 `;
                 list.appendChild(item);
@@ -608,7 +608,7 @@ class PodcastApp {
                     <span>${this.escape(ep.podcast)}</span>
                 </div>
                 <div class="playlist-item-actions">
-                    <button class="play-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(this.escape(ep.image))}">▶</button>
+                    <button class="play-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.image)}">▶</button>
                     <button class="remove-btn" data-idx="${idx}">✕</button>
                 </div>
             `;
@@ -835,8 +835,8 @@ class PodcastApp {
                     </div>
                     <p>${this.escape(ep.description)}</p>
                     <div class="episode-actions">
-                        <button class="play-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(this.escape(ep.podcast_image))}">▶ Play</button>
-                        <button class="add-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(this.escape(ep.podcast_image))}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
+                        <button class="play-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">▶ Play</button>
+                        <button class="add-btn" data-id="${ep.id}" data-url="${this.escape(ep.audio)}" data-title="${this.escape(ep.title)}" data-podcast="${this.escape(ep.podcast)}" data-image="${this.safeUrl(ep.podcast_image)}">${isInPlaylist ? '✓ In List' : '+ Add'}</button>
                     </div>
                 `;
                 list.appendChild(item);
@@ -908,16 +908,15 @@ class PodcastApp {
             .replace(/'/g, '&#39;');
     }
 
-    // Returns a raw URL (or an inline placeholder). Callers must escape() it for HTML.
+    // Returns a sanitized URL (or an inline placeholder). Handles XSS by only
+    // allowing http/https URLs and upgrading HTTP to HTTPS.
     safeUrl(url) {
-        if (!url) {
-            return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23333"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="#888" font-size="14">🎙️</text></svg>';
-        }
-        // Upgrade HTTP URLs to HTTPS to avoid Mixed Content warnings on HTTPS pages
-        if (url.startsWith('http://')) {
-            return url.replace('http://', 'https://');
-        }
-        return url;
+        const placeholder = 'data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg"%20width%3D"100"%20height%3D"100"%3E%3Crect%20width%3D"100"%20height%3D"100"%20fill%3D"%23333"%2F%3E%3Ctext%20x%3D"50"%20y%3D"50"%20text-anchor%3D"middle"%20dy%3D".3em"%20fill%3D"%23888"%20font-size%3D"14"%3E%F0%9F%8E%99%EF%B8%8F%3C%2Ftext%3E%3C%2Fsvg%3E';
+        if (!url || typeof url !== 'string') return placeholder;
+        // Only allow http/https — reject anything else to prevent XSS
+        if (!url.match(/^https?:\/\//)) return placeholder;
+        // Upgrade HTTP to HTTPS to avoid Mixed Content warnings
+        return url.replace(/^http:/, 'https:');
     }
 
     formatTime(seconds) {
