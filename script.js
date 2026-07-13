@@ -414,6 +414,7 @@ class PodcastApp {
     
 
     navigateTo(page, state = {}) {
+        if (page === 'landing' && this.currentPage === 'landing') return;
         const current = this.parseHash();
         const sameRoute = current.page === page &&
             (page !== 'details' || current.id === (state.id || null));
@@ -909,7 +910,14 @@ class PodcastApp {
 
     // Returns a raw URL (or an inline placeholder). Callers must escape() it for HTML.
     safeUrl(url) {
-        return url || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23333"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="#888" font-size="14">🎙️</text></svg>';
+        if (!url) {
+            return 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23333"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="#888" font-size="14">🎙️</text></svg>';
+        }
+        // Upgrade HTTP URLs to HTTPS to avoid Mixed Content warnings on HTTPS pages
+        if (url.startsWith('http://')) {
+            return url.replace('http://', 'https://');
+        }
+        return url;
     }
 
     formatTime(seconds) {
