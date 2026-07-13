@@ -488,7 +488,7 @@ class PodcastApp {
             card.className = 'podcast-card';
             const author = podcast.publisher || podcast.creator || 'Unknown';
             card.innerHTML = `
-                <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" onerror="this.style.display='none'" />
+                <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" onerror="this.style.display='block';this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22100%22%3E%3Crect width=%22100%22 height=%22100%22 fill=%22%23333%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23888%22 font-size=%2214%22%3E%F0%9F%8E%99%EF%B8%8F%3C/text%3E%3C/svg%3E'" />
                 <h3>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h3>
                 <span class="podcast-author">${this.escape(author)}</span>
                 ${this.isSearching ? '<span class="search-badge">☆</span>' : ''}
@@ -527,7 +527,7 @@ class PodcastApp {
                 if (podcastDetails) {
                     podcastDetails.innerHTML = `
                         <div class="podcast-hero">
-                            <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" onerror="this.style.display='none'" />
+                            <img src="${this.safeUrl(podcast.image)}" alt="${this.escape(podcast.name || podcast.title || podcast.title_original)}" onerror="this.style.display='block';this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22200%22 height=%22200%22%3E%3Crect width=%22200%22 height=%22200%22 fill=%22%23333%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23888%22 font-size=%2220%22%3E%F0%9F%8E%99%EF%B8%8F%3C/text%3E%3C/svg%3E'" />
                             <div class="podcast-hero-info">
                                 <h2>${this.escape(podcast.name || podcast.title || podcast.title_original)}</h2>
                                 <p>${this.escape(podcast.description)}</p>
