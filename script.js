@@ -220,6 +220,8 @@ class PodcastApp {
         this.loadPodcasts();
         this.setupAudio();
         this.setupRouter();
+        const errorMessage = this.el('error-message');
+        if (errorMessage) errorMessage.style.display = 'none';
     }
 
     setupRouter() {
@@ -800,6 +802,13 @@ class PodcastApp {
             }
         } catch (err) {
             console.error('Search failed:', err);
+            const searchStatus = this.el('search-status');
+            const errorMessage = this.el('error-message');
+            if (searchStatus) searchStatus.textContent = '';
+            if (errorMessage) {
+                errorMessage.textContent = 'Error: ' + err.message;
+                errorMessage.style.display = 'block';
+            }
         } finally {
             this.showLoading(false);
         }
@@ -902,6 +911,13 @@ class PodcastApp {
             if (searchStatus) searchStatus.textContent = data.total ? `Showing ${data.total} podcasts` : '';
         } catch (err) {
             console.error('Failed to load podcasts:', err);
+            const searchStatus = this.el('search-status');
+            const errorMessage = this.el('error-message');
+            if (searchStatus) searchStatus.textContent = '';
+            if (errorMessage) {
+                errorMessage.textContent = 'Error: ' + err.message;
+                errorMessage.style.display = 'block';
+            }
         } finally {
             this.showLoading(false);
         }
