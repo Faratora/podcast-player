@@ -26,7 +26,7 @@ const CONFIG = {
     PI_KEY: LOCAL_CONFIG.PODCAST_PI_KEY || window.__PODCAST_PI_KEY__ || '',
     PI_SECRET: LOCAL_CONFIG.PODCAST_PI_SECRET || window.__PODCAST_PI_SECRET__ || '',
     PI_BASE_URL: LOCAL_CONFIG.PODCAST_PI_BASE_URL || window.__PODCAST_PI_BASE_URL__ || 'https://api.podcastindex.org/api/1.0',
-    DEBOUNCE_DELAY: 300,
+    DEBOUNCE_DELAY: 1000,
     RESUME_OFFSET: 10,
 };
 
@@ -295,10 +295,22 @@ class PodcastApp {
         const closePlayerBtn = this.el('close-player-btn');
 
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
+            searchInput.addEventListener('keyup', (e) => {
                 clearTimeout(this.searchTimeout);
                 const q = e.target.value.trim();
                 this.searchTimeout = setTimeout(() => {
+                    if (q.length < 3) {
+                        this.isSearching = false;
+                        this.currentPageNum = 0;
+                        this.nextPageNumber = 1;
+                        this.nextOffset = 0;
+                        this.searchQuery = '';
+                        this.hasMore = true;
+                        const grid = this.el('podcast-grid');
+                        if (grid) grid.innerHTML = '';
+                        this.loadPodcasts();
+                        return;
+                    }
                     if (q) {
                         this.isSearching = true;
                         this.currentPageNum = 0;
