@@ -34,9 +34,24 @@ const IS_PI = CONFIG.PROVIDER === 'podcastindex';
 
 // SHA-1 hex digest (used for Podcast Index request signing) via Web Crypto
 async function sha1Hex(str) {
-    const bytes = new TextEncoder().encode(str);
-    const digest = await crypto.subtle.digest('SHA-1', bytes);
-    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+    try {
+        const bytes = new TextEncoder().encode(str);
+        // Добавляем таймаут на случай зависания
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('SHA-1 calculation timeout')), 5000);
+        });
+        
+        const digestPromise = crypto.subtle.digest('SHA-1', bytes);
+        const digest = await Promise.race([digestPromise, timeoutPromise]);
+        
+        return Array.from(new Uint8Array(digest))
+            .map(b => b.toString(16).padStart(2, '0'))
+            .join('');
+    } catch (error) {
+        console.error('SHA-1 calculation failed:', error);
+        // Возвращаем пустую строку как fallback
+        return '';
+    }
 }
 
 const PROGRESS_KEY = 'podcast_progress';
@@ -90,45 +105,55 @@ class PodcastApp {
         this.init();
     }
 
+
+
+    
     async apiFetch(url) {
-        const cached = this.cache.get(url);
-        if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
-            return cached.data;
-        }
-        if (this.pendingRequests.has(url)) {
-            return this.pendingRequests.get(url);
-        }
-        const promise = this.throttledFetch(url);
-        this.pendingRequests.set(url, promise);
-        try {
-            return await promise;
-        } finally {
-            this.pendingRequests.delete(url);
-        }
+    const cached = this.cache.get(url);
+    if (cached && Date.now() - cached.timestamp < this.cacheTTL) {
+        return cached.data;
     }
+    if (this.pendingRequests.has(url)) {
+        return this.pendingRequests.get(url);
+    }
+    const promise = this.throttledFetch(url); 
+    this.pendingRequests.set(url, promise);
+    try {
+        return await promise;
+    } finally {
+        this.pendingRequests.delete(url);
+    }
+}
 
     async throttledFetch(url) {
-        const wait = this.minRequestInterval - (Date.now() - this.lastRequestTime);
-        if (wait > 0) {
-            await new Promise(resolve => setTimeout(resolve, wait));
-        }
-        return this.fetchWithRetry(url);
+    const wait = this.minRequestInterval - (Date.now() - this.lastRequestTime);
+    if (wait > 0) {
+        await new Promise(resolve => setTimeout(resolve, wait));
     }
+    return this.fetchWithRetry(url); 
+}
 
     async buildAuthHeaders() {
-        const headers = { 'Accept': 'application/json' };
-        if (IS_PI) {
-            if (CONFIG.PI_KEY && CONFIG.PI_SECRET) {
+    const headers = { 'Accept': 'application/json' };
+    
+    if (IS_PI) {
+        if (CONFIG.PI_KEY && CONFIG.PI_SECRET) {
+            try {
                 const authDate = Math.floor(Date.now() / 1000);
                 headers['X-Auth-Key'] = CONFIG.PI_KEY;
                 headers['X-Auth-Date'] = String(authDate);
                 headers['Authorization'] = await sha1Hex(CONFIG.PI_KEY + CONFIG.PI_SECRET + authDate);
+            } catch (error) {
+                console.error('Failed to build PI auth headers:', error);
+                
             }
-        } else if (CONFIG.API_KEY) {
-            headers['X-ListenAPI-Key'] = CONFIG.API_KEY;
         }
-        return headers;
+    } else if (CONFIG.API_KEY) {
+        headers['X-ListenAPI-Key'] = CONFIG.API_KEY;
     }
+    
+    return headers;
+}
 
     async fetchWithRetry(url, attempt = 0) {
         const maxAttempts = 3;
@@ -147,7 +172,10 @@ class PodcastApp {
         this.cache.set(url, { data, timestamp: Date.now() });
         return data;
     }
-
+     catch (error) {
+        console.error('Fetch error:', error);
+        throw error; // Пробрасываем дальше
+    }
     // Normalize a Podcast Index feed into the shape the UI expects 
     normFeed(f) {
         return {
