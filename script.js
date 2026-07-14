@@ -360,10 +360,23 @@ class PodcastApp {
         if (progressBar) {
             progressBar.addEventListener('click', (e) => {
                 const rect = progressBar.getBoundingClientRect();
-                const pct = (e.clientX - rect.left) / rect.width;
-                this.audio.currentTime = pct * this.audio.duration;
+                const width = rect.width;
+                if (!width || !Number.isFinite(width)) return;
+        
+                const x = e.clientX - rect.left;
+                let pct = x / width;
+                pct = Math.max(0, Math.min(1, pct)); // защита от выхода за границы
+        
+                // Ставим currentTime только если duration валиден
+                if (Number.isFinite(this.audio.duration) && this.audio.duration > 0) {
+                    const targetTime = pct * this.audio.duration;
+                    if (Number.isFinite(targetTime)) {
+                        this.audio.currentTime = targetTime;
+                    }
+                }
             });
         }
+        
         if (playlistToggleBtn) {
             playlistToggleBtn.addEventListener('click', () => this.togglePlaylistBtn());
         }
@@ -385,19 +398,19 @@ class PodcastApp {
 
     setupAudio() {
         this.audio.addEventListener('timeupdate', () => {
-            if (this.audio.duration) {
-                const pct = (this.audio.currentTime / this.audio.duration) * 100;
-                const progressFill = this.el('progress-fill');
-                const currentTimeEl = this.el('current-time');
-                if (progressFill) progressFill.style.width = `${pct}%`;
-                if (currentTimeEl) currentTimeEl.textContent = this.formatTime(this.audio.currentTime);
-
-                
-                if (this.currentEpisodeId && this.audio.currentTime > 5) {
-                    this.saveProgress(this.currentEpisodeId, this.audio.currentTime);
-                }
-                this.savePlayerState();
+            // duration должен быть конечным числом
+            if (!Number.isFinite(this.audio.duration)) return;
+    
+            const pct = (this.audio.currentTime / this.audio.duration) * 100;
+            const progressFill = this.el('progress-fill');
+            const currentTimeEl = this.el('current-time');
+            if (progressFill) progressFill.style.width = `${pct}%`;
+            if (currentTimeEl) currentTimeEl.textContent = this.formatTime(this.audio.currentTime);
+    
+            if (this.currentEpisodeId && this.audio.currentTime > 5) {
+                this.saveProgress(this.currentEpisodeId, this.audio.currentTime);
             }
+            this.savePlayerState();
         });
 
         this.audio.addEventListener('loadedmetadata', () => {
@@ -647,9 +660,9 @@ class PodcastApp {
 
     playEpisode(url, title, podcast, episodeId, image) {
         this.audio.src = url;
-        this.audio.play().catch(() => {
-            // Autoplay may be blocked until user interacts; ignore silently.
-        });
+        // this.audio.play().catch(() => {
+        //     // Autoplay may be blocked until user interacts; ignore silently.
+        // });
         const player = this.el('player');
         if (player) player.classList.remove('hidden');
         const playerTitle = this.el('player-title');
@@ -664,13 +677,23 @@ class PodcastApp {
         const saved = this.getProgress(episodeId);
         if (saved > 5) {
             const resumeAt = Math.max(0, saved - CONFIG.RESUME_OFFSET);
-            this.audio.addEventListener('loadedmetadata', () => {
-                if (resumeAt < this.audio.duration) {
-                    this.audio.currentTime = resumeAt;
-                }
-            }, { once: true });
-        }
+
+
+          const onMetadata = () => {
+            if (!Number.isFinite(this.audio.duration)) {
+                console.warn('Duration not available yet; skipping resume.');
+                return;
+            }
+            if (Number.isFinite(resumeAt) && resumeAt >= 0 && resumeAt <= this.audio.duration) {
+                this.audio.currentTime = resumeAt;
+            } else {
+                console.warn('Invalid resume time:', resumeAt);
+            }
+        };
+
+        this.audio.addEventListener('loadedmetadata', onMetadata, { once: true });
     }
+}
 
     togglePlay() {
         if (this.audio.paused) {
@@ -681,7 +704,17 @@ class PodcastApp {
     }
 
     seek(seconds) {
-        this.audio.currentTime = Math.max(0, this.audio.currentTime + seconds);
+        if (!Number.isFinite(this.audio.currentTime)) {
+            console.warn('Cannot seek: currentTime is not a valid number.');
+            return;
+        }
+        let target = this.audio.currentTime + seconds;
+        if (!Number.isFinite(target)) return;
+        target = Math.max(0, target);
+        if (Number.isFinite(this.audio.duration) && target > this.audio.duration) {
+            target = this.audio.duration;
+        }
+        this.audio.currentTime = target;
     }
 
    
@@ -699,34 +732,53 @@ class PodcastApp {
 
     savePlayerState() {
         if (!this.currentPlayerEpisode) return;
+        const currentTime = this.audio.currentTime;
+        const position = Number.isFinite(currentTime) ? currentTime : 0;
         storage.set(PLAYER_KEY, {
             ...this.currentPlayerEpisode,
-            position: this.audio.currentTime || 0,
+            position,
         });
     }
 
     restorePlayer() {
         const ep = storage.get(PLAYER_KEY, null);
         if (!ep || !ep.id) return;
+    
         this.currentPlayerEpisode = ep;
         this.currentEpisodeId = ep.id;
+    
         const player = this.el('player');
         if (player) player.classList.remove('hidden');
+    
         const playerTitle = this.el('player-title');
         const playerPodcast = this.el('player-podcast');
         if (playerTitle) playerTitle.textContent = ep.title;
         if (playerPodcast) playerPodcast.textContent = ep.podcast;
-        this.audio.src = ep.audio;
-        this.audio.load();
+    
+        if (this.audio.src !== ep.audio) {
+            this.audio.src = ep.audio;
+        }
+    
         const pos = ep.position || 0;
-        this.audio.addEventListener('loadedmetadata', () => {
-            if (pos > 0 && pos < this.audio.duration) {
+    
+        const onMetadata = () => {
+            if (!Number.isFinite(this.audio.duration)) {
+                console.warn('Duration not ready; cannot restore position.');
+                return;
+            }
+    
+            if (Number.isFinite(pos) && pos >= 0 && pos <= this.audio.duration) {
                 this.audio.currentTime = pos;
                 const currentTimeEl = this.el('current-time');
                 if (currentTimeEl) currentTimeEl.textContent = this.formatTime(pos);
+            } else {
+                console.warn('Invalid stored position:', pos);
             }
-        }, { once: true });
+        };
+    
+        this.audio.addEventListener('loadedmetadata', onMetadata, { once: true });
     }
+    
 
     togglePlaylistBtn() {
         if (!this.currentPlayerEpisode) return;
